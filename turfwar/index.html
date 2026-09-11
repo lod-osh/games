@@ -2629,8 +2629,18 @@ button:active, .popup-btn:active, .popup-close-btn:active {
 #stud-stats-modal.active { display: flex; }
 
     </style>
+#pwa-install-btn {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 999; display: none;
+    padding: 10px 18px; border-radius: 24px;
+    background: #00ff00; color: #0a0c0a; font-weight: bold; font-size: 13px;
+    border: none; box-shadow: 0 0 16px rgba(0,255,0,0.5);
+    font-family: inherit; letter-spacing: 0.5px;
+}
+#pwa-install-btn.show { display: block; }
 </head>
 <body>
+<button id="pwa-install-btn" onclick="handlePwaInstallClick()">📲 INSTALL APP</button>
 <!-- TITLE SCREEN - shown on first load, covers everything until New Game
      or Load is picked. Tutorial/Manual open on top without dismissing it. -->
 <div id="title-screen">
@@ -43327,7 +43337,7 @@ function openSaveLoad() {
             applyMoveKeysFromJoystick(len);
         }
         function applyMoveKeysFromJoystick(dragLen) {
-            const DEADZONE = 10;
+            const DEADZONE = 4;
             if (dragLen < DEADZONE) {
                 keys['ArrowUp'] = keys['ArrowDown'] = keys['ArrowLeft'] = keys['ArrowRight'] = false;
                 return;
@@ -43336,10 +43346,10 @@ function openSaveLoad() {
             // A wide angular band per direction (not just the 4 exact axes)
             // so diagonals feel natural - both keys go true when the drag
             // angle falls between two cardinal directions.
-            keys['ArrowLeft'] = x < -0.3;
-            keys['ArrowRight'] = x > 0.3;
-            keys['ArrowUp'] = y < -0.3;
-            keys['ArrowDown'] = y > 0.3;
+            keys['ArrowLeft'] = x < -0.15;
+            keys['ArrowRight'] = x > 0.15;
+            keys['ArrowUp'] = y < -0.15;
+            keys['ArrowDown'] = y > 0.15;
         }
         function resetMoveNub() {
             moveNubEl.style.left = '27px';
@@ -48485,6 +48495,39 @@ function resetJazzBarDescription() {
       });
     });
   }
+
+  // ===== PWA install button =====
+  // Chrome fires beforeinstallprompt when it decides the page is
+  // installable; we capture it instead of letting Chrome show its own
+  // mini-infobar, and surface our own visible button instead.
+  let deferredInstallPrompt = null;
+  const installBtn = document.getElementById('pwa-install-btn');
+
+  function isAlreadyInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true; // iOS home-screen check
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    if (isAlreadyInstalled()) return;
+    deferredInstallPrompt = e;
+    installBtn.classList.add('show');
+  });
+
+  function handlePwaInstallClick() {
+    if (!deferredInstallPrompt) return;
+    installBtn.classList.remove('show');
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.finally(() => {
+      deferredInstallPrompt = null;
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    installBtn.classList.remove('show');
+    deferredInstallPrompt = null;
+  });
 </script>
 
 </body>
