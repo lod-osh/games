@@ -1,14 +1,14 @@
 // Bump CACHE_VERSION whenever index.html or any asset changes so clients pick up the update.
-const CACHE_VERSION = 'turfwar-v6-95-135-assets3';
+const CACHE_VERSION = 'turfwar-v6-95-135-assets4';
 
 // Core shell — must all be present or the app can't boot offline.
 const SHELL_ASSETS = [
   './index.html',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-maskable-192.png',
-  './icons/icon-maskable-512.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
 ];
 
 // Images live at repo root; sounds live in /sounds (matches SFX_PATH in-game).
