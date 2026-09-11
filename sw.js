@@ -1,5 +1,5 @@
 // Bump CACHE_VERSION whenever index.html or any asset changes so clients pick up the update.
-const CACHE_VERSION = 'turfwar-v6-95-135-assets2';
+const CACHE_VERSION = 'turfwar-v6-95-135-assets3';
 
 // Core shell — must all be present or the app can't boot offline.
 const SHELL_ASSETS = [
@@ -12,6 +12,7 @@ const SHELL_ASSETS = [
 ];
 
 // Images live at repo root; sounds live in /sounds (matches SFX_PATH in-game).
+// All sounds are .mp3 (wavs were converted to shrink repo size).
 // Precached best-effort so a fresh install works fully offline. Filenames
 // must exactly match the case of the files in the repo (GitHub Pages is
 // case-sensitive, unlike most desktop filesystems).
@@ -118,28 +119,28 @@ const IMAGE_ASSETS = [
 ];
 
 const SOUND_ASSETS = [
-  './sounds/AIRPORT.wav',
-  './sounds/CASINO.wav',
-  './sounds/CEMETERY.wav',
-  './sounds/CHINATOWN.wav',
-  './sounds/DOCKS.wav',
-  './sounds/DOWNTOWN.wav',
-  './sounds/FINANCIAL.wav',
-  './sounds/INDUSTRIAL.wav',
-  './sounds/MALL.wav',
-  './sounds/OLDTOWN.wav',
-  './sounds/PROJECTS.wav',
-  './sounds/REDLIGHT.wav',
-  './sounds/STADIUM.wav',
-  './sounds/SUBURBS.wav',
-  './sounds/TECHPARK.wav',
-  './sounds/TRAINYARD.wav',
-  './sounds/UNIVERSITY.wav',
-  './sounds/WATERFRONT.wav',
-  './sounds/WasntMeanttoBe.wav',
+  './sounds/AIRPORT.mp3',
+  './sounds/CASINO.mp3',
+  './sounds/CEMETERY.mp3',
+  './sounds/CHINATOWN.mp3',
+  './sounds/DOCKS.mp3',
+  './sounds/DOWNTOWN.mp3',
+  './sounds/FINANCIAL.mp3',
+  './sounds/INDUSTRIAL.mp3',
+  './sounds/MALL.mp3',
+  './sounds/OLDTOWN.mp3',
+  './sounds/PROJECTS.mp3',
+  './sounds/REDLIGHT.mp3',
+  './sounds/STADIUM.mp3',
+  './sounds/SUBURBS.mp3',
+  './sounds/TECHPARK.mp3',
+  './sounds/TRAINYARD.mp3',
+  './sounds/UNIVERSITY.mp3',
+  './sounds/WATERFRONT.mp3',
+  './sounds/WasntMeanttoBe.mp3',
   './sounds/background-music1.mp3',
   './sounds/breep.mp3',
-  './sounds/crashclub.wav',
+  './sounds/crashclub.mp3',
   './sounds/deal.mp3',
   './sounds/death.mp3',
   './sounds/dialog.mp3',
@@ -149,9 +150,9 @@ const SOUND_ASSETS = [
   './sounds/engage-hit-sound2.mp3',
   './sounds/engage-hit-sound3.mp3',
   './sounds/equip.mp3',
-  './sounds/gameover.wav',
-  './sounds/goblins.wav',
-  './sounds/gunslide.wav',
+  './sounds/gameover.mp3',
+  './sounds/goblins.mp3',
+  './sounds/gunslide.mp3',
   './sounds/happyclick.mp3',
   './sounds/heal.mp3',
   './sounds/hurt.mp3',
@@ -163,15 +164,15 @@ const SOUND_ASSETS = [
   './sounds/pow.mp3',
   './sounds/rain.mp3',
   './sounds/reload-sound.mp3',
-  './sounds/respite.wav',
+  './sounds/respite.mp3',
   './sounds/rifleShoot.mp3',
   './sounds/scan.mp3',
-  './sounds/shotgun-sound.wav',
-  './sounds/sidewalk.wav',
+  './sounds/shotgun-sound.mp3',
+  './sounds/sidewalk.mp3',
   './sounds/smgShoot.mp3',
   './sounds/steps.mp3',
-  './sounds/takeover.wav',
-  './sounds/taxi.wav',
+  './sounds/takeover.mp3',
+  './sounds/taxi.mp3',
   './sounds/tiny_beep.mp3',
   './sounds/upgrade.mp3',
   './sounds/victory-sound.mp3'

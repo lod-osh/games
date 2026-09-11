@@ -3449,24 +3449,24 @@ let currentAudio = null;
 let soundEnabled = true;
 
 const locationSounds = {
-    'Downtown': 'DOWNTOWN.wav',
-    'University': 'UNIVERSITY.wav',
-    'Waterfront': 'WATERFRONT.wav',
-    'Suburbs': 'SUBURBS.wav',
-    'Mall': 'MALL.wav',
-    'Docks': 'DOCKS.wav',
-    'Industrial': 'INDUSTRIAL.wav',
-    'Airport': 'AIRPORT.wav',
-    'Chinatown': 'CHINATOWN.wav',
-    'Redlight': 'REDLIGHT.wav',
-    'Projects': 'PROJECTS.wav',
-    'Casino': 'CASINO.wav',
-    'Financial': 'FINANCIAL.wav',
-    'OldTown': 'OLDTOWN.wav',
-    'TechPark': 'TECHPARK.wav',
-    'Stadium': 'STADIUM.wav',
-    'Cemetery': 'CEMETERY.wav',
-    'TrainYard': 'TRAINYARD.wav'
+    'Downtown': 'DOWNTOWN.mp3',
+    'University': 'UNIVERSITY.mp3',
+    'Waterfront': 'WATERFRONT.mp3',
+    'Suburbs': 'SUBURBS.mp3',
+    'Mall': 'MALL.mp3',
+    'Docks': 'DOCKS.mp3',
+    'Industrial': 'INDUSTRIAL.mp3',
+    'Airport': 'AIRPORT.mp3',
+    'Chinatown': 'CHINATOWN.mp3',
+    'Redlight': 'REDLIGHT.mp3',
+    'Projects': 'PROJECTS.mp3',
+    'Casino': 'CASINO.mp3',
+    'Financial': 'FINANCIAL.mp3',
+    'OldTown': 'OLDTOWN.mp3',
+    'TechPark': 'TECHPARK.mp3',
+    'Stadium': 'STADIUM.mp3',
+    'Cemetery': 'CEMETERY.mp3',
+    'TrainYard': 'TRAINYARD.mp3'
 };
 
 // ===== SFX engine =====
@@ -3519,7 +3519,7 @@ function playSfxVariant(filenames, opts) {
 const WEAPON_SFX = {
     pistol: 'pistolShoot.mp3',
     smg: 'smgShoot.mp3',
-    shotgun: 'shotgun-sound.wav',
+    shotgun: 'shotgun-sound.mp3',
     rifle: 'rifleShoot.mp3'
 };
 
@@ -4240,17 +4240,17 @@ function enterMotelLobby() {
 
 function playClubMusic() {
     if (!soundEnabled) return;
-    if (currentLoopTrackName === 'crashclub.wav' && currentAudio && !currentAudio.paused) return;
+    if (currentLoopTrackName === 'crashclub.mp3' && currentAudio && !currentAudio.paused) return;
     
     stopMusic(); // Stop any current music
     
-    currentAudio = new Audio(SFX_PATH + 'crashclub.wav');
+    currentAudio = new Audio(SFX_PATH + 'crashclub.mp3');
     currentAudio.loop = true;
     currentAudio.volume = 0.3;
-    currentLoopTrackName = 'crashclub.wav';
+    currentLoopTrackName = 'crashclub.mp3';
     
     currentAudio.addEventListener('error', function() {
-        console.warn('[music] failed to load:', SFX_PATH + 'crashclub.wav');
+        console.warn('[music] failed to load:', SFX_PATH + 'crashclub.mp3');
         currentAudio = null;
         currentLoopTrackName = null;
     });
@@ -4258,7 +4258,7 @@ function playClubMusic() {
     const playPromise = currentAudio.play();
     if (playPromise !== undefined) {
         playPromise.catch((err) => {
-            console.warn('[music] play() rejected:', SFX_PATH + 'crashclub.wav', err && err.name);
+            console.warn('[music] play() rejected:', SFX_PATH + 'crashclub.mp3', err && err.name);
             currentAudio = null;
             currentLoopTrackName = null;
         });
@@ -4270,7 +4270,7 @@ function playJazzMusic() {
     
     stopMusic();
     
-    currentAudio = new Audio(SFX_PATH + 'WasntMeanttoBe.wav');
+    currentAudio = new Audio(SFX_PATH + 'WasntMeanttoBe.mp3');
     currentAudio.loop = true;
     currentAudio.volume = 0.3;
     
@@ -4607,17 +4607,17 @@ function enterGoblins() {
 
 function playGoblinsMusic() {
     if (!soundEnabled) return;
-    if (currentLoopTrackName === 'goblins.wav' && currentAudio && !currentAudio.paused) return;
+    if (currentLoopTrackName === 'goblins.mp3' && currentAudio && !currentAudio.paused) return;
 
     stopMusic();
 
-    currentAudio = new Audio(SFX_PATH + 'goblins.wav');
+    currentAudio = new Audio(SFX_PATH + 'goblins.mp3');
     currentAudio.loop = true;
     currentAudio.volume = 0.25;
-    currentLoopTrackName = 'goblins.wav';
+    currentLoopTrackName = 'goblins.mp3';
 
     currentAudio.addEventListener('error', function() {
-        console.warn('[music] failed to load:', SFX_PATH + 'goblins.wav');
+        console.warn('[music] failed to load:', SFX_PATH + 'goblins.mp3');
         currentAudio = null;
         currentLoopTrackName = null;
     });
@@ -4625,7 +4625,7 @@ function playGoblinsMusic() {
     const playPromise = currentAudio.play();
     if (playPromise !== undefined) {
         playPromise.catch((err) => {
-            console.warn('[music] play() rejected:', SFX_PATH + 'goblins.wav', err && err.name);
+            console.warn('[music] play() rejected:', SFX_PATH + 'goblins.mp3', err && err.name);
             currentAudio = null;
             currentLoopTrackName = null;
         });
@@ -13257,7 +13257,7 @@ function openHideoutManager() {
         showSharpeChoice();
         return;
     }
-    playLoopTrack('respite.wav', 0.3);
+    playLoopTrack('respite.mp3', 0.3);
     const { popup, titleElement, image, descriptionElement } = getTravelPopupElements();
 
     const loc = locations[location];
@@ -23251,7 +23251,7 @@ function showActionPopup(title, imagePath, description) {
         document.getElementById('action-choice-popup').style.display = 'none';
         if (gameState.cash < fare) { log('Not enough cash for that fare.', 'danger'); return; }
         gameState.cash -= fare;
-        playSfx('taxi.wav', { volume: 0.5 });
+        playSfx('taxi.mp3', { volume: 0.5 });
         // Same per-hop heat cut as walking gets - still real distance
         // covered, just paid for instead of on foot. Computed before
         // currentLocation moves, same as taxiFareTo's own route lookup.
@@ -23591,7 +23591,7 @@ function showGameOverScreen(reason, message) {
     // Stop current music and play game over / victory stinger
     stopMusic();
     setTimeout(() => {
-        playSfx(isVictory ? 'victory-sound.mp3' : 'gameover.wav', { volume: 0.4 });
+        playSfx(isVictory ? 'victory-sound.mp3' : 'gameover.mp3', { volume: 0.4 });
     }, 100);
     
     // Game over can fire while another full-screen overlay is open (the map,
@@ -25551,9 +25551,9 @@ function closeTravelPopup() {
     // Remove keyboard listener
     document.removeEventListener('keydown', closeTravelPopupOnKey);
 
-    // The hideout manager loops respite.wav over this same shared popup -
+    // The hideout manager loops respite.mp3 over this same shared popup -
     // resume normal location ambient once it (specifically) closes.
-    if (currentLoopTrackName === 'respite.wav' && typeof playLocationMusic === 'function') {
+    if (currentLoopTrackName === 'respite.mp3' && typeof playLocationMusic === 'function') {
         playLocationMusic(gameState.currentLocation);
     }
 
@@ -29870,7 +29870,7 @@ function syncPopupShownAt() {
         var to = route[route.length - 1];
         var coords = route.map(function(loc){ return MAP_LOCS[loc]; });
         if (coords.some(function(c){ return !c; })) { if (callback) callback(); return; }
-        playSfx('sidewalk.wav', { volume: 0.4 });
+        playSfx('sidewalk.mp3', { volume: 0.4 });
         var overlay = document.getElementById('minimap-overlay');
         overlay.style.display = 'flex';
         renderCityMap();
@@ -46752,7 +46752,7 @@ function openSaveLoad() {
                     player.reloadTimer--;
                     if (player.reloadTimer <= 0) {
                         player.ammo = player.maxAmmo;
-                        playSfx('gunslide.wav', { volume: 0.4 });
+                        playSfx('gunslide.mp3', { volume: 0.4 });
                     }
                 }
 
@@ -46969,7 +46969,7 @@ function openSaveLoad() {
             // regardless, so there's nothing left for it to track anyway.
             ambushActive = false;
             ambushCheckTimer = 0;
-            if (siegeActive) playSfx('takeover.wav', { volume: 0.5 });
+            if (siegeActive) playSfx('takeover.mp3', { volume: 0.5 });
             streetEndX = layout.length;
             entities = siegeActive ? [] : layout.entities.map(en => Object.assign({ inRange: false }, en));
             // Theo stays put in Downtown permanently, paid off or not - see
