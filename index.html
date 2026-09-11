@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lod-osh :: games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0a;
+    --fg: #00ff00;
+    --dim: #4d7a52;
+    --dimmer: #2b4a2f;
+    --border: #1a2e1c;
+    --live-bg: #0f2410;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+  }
+  body {
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,255,0,0.025) 0px, rgba(0,255,0,0.025) 1px, transparent 1px, transparent 2px);
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+  .boot-line {
+    color: var(--dim);
+    font-size: 12px;
+    margin: 0 0 4px;
+    white-space: pre;
+  }
+  h1 {
+    font-size: clamp(28px, 6vw, 40px);
+    margin: 18px 0 6px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  h1 .cursor {
+    display: inline-block;
+    width: 0.55em;
+    background: var(--fg);
+    animation: blink 1s steps(1) infinite;
+    margin-left: 2px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .subtitle {
+    color: var(--dim);
+    font-size: 14px;
+    margin: 0 0 40px;
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+  .listing-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--dimmer);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+  }
+  .entry {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+  }
+  .entry-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .entry-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--fg);
+  }
+  .entry-path {
+    color: var(--dim);
+    font-weight: 400;
+    font-size: 14px;
+  }
+  .entry-desc {
+    color: var(--dim);
+    font-size: 13px;
+    margin-top: 6px;
+    line-height: 1.5;
+    max-width: 55ch;
+  }
+  .status {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .status-live {
+    background: var(--live-bg);
+    color: var(--fg);
+    border: 1px solid var(--fg);
+  }
+  .status-dev {
+    background: transparent;
+    color: var(--dim);
+    border: 1px solid var(--dimmer);
+  }
+  a.entry:hover .entry-name,
+  a.entry:focus-visible .entry-name {
+    text-decoration: underline;
+  }
+  a.entry:focus-visible {
+    outline: 1px dashed var(--fg);
+    outline-offset: 4px;
+  }
+  .entry.placeholder {
+    cursor: default;
+  }
+  .entry.placeholder .entry-name { color: var(--dimmer); }
+  .footer {
+    margin-top: 40px;
+    color: var(--dimmer);
+    font-size: 12px;
+  }
+  .footer a { color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="boot-line">omnicorp_citynet // access: public</p>
+  <h1 id="type-target"></h1>
+  <p class="subtitle">Small games, most not fully tested. I like to cycle through developing several at a time to maximize the amount of dopamine I can squeeze out of the project. All of these run in the browser, and some can be installed.</p>
+
+  <div class="listing-header">
+    <span>NAME</span>
+    <span>STATUS</span>
+  </div>
+
+  <a class="entry" href="turfwar/">
+    <div class="entry-row">
+      <span class="entry-name">TURF WAR <span class="entry-path">/turfwar</span></span>
+      <span class="status status-live">LIVE</span>
+    </div>
+    <p class="entry-desc">Gang territory management on the streets of a city that's always watching. Installable &mdash; add it to your home screen for offline play.</p>
+  </a>
+
+  <div class="entry placeholder">
+    <div class="entry-row">
+      <span class="entry-name">??? <span class="entry-path">/next</span></span>
+      <span class="status status-dev">IN DEV</span>
+    </div>
+    <p class="entry-desc">Something else is coming. This row will turn into a link when it's ready.</p>
+  </div>
+
+  <p class="footer">Built by <a href="https://github.com/lod-osh" target="_blank" rel="noopener">lod-osh</a>. Source for everything lives in this repo.</p>
+</div>
+
+<script>
+  const text = "GAMES";
+  const el = document.getElementById('type-target');
+  let i = 0;
+  function type() {
+    if (i <= text.length) {
+      el.innerHTML = text.slice(0, i) + '<span class="cursor"></span>';
+      i++;
+      setTimeout(type, 90);
+    }
+  }
+  type();
+</script>
+</body>
+</html>
