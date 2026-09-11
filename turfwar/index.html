@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>TURF WAR</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Registered as early as physically possible in the document, before
+    // any of the game's ~48k lines of script run - beforeinstallprompt can
+    // fire the moment Chrome finishes evaluating installability, which may
+    // be well before a listener placed near </body> ever gets attached.
+    window.__deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.__deferredInstallPrompt = e;
+      if (window.__onInstallPromptCaptured) window.__onInstallPromptCaptured();
+    });
+  </script>
   <meta name="theme-color" content="#0a0c0a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48497,10 +48509,10 @@ function resetJazzBarDescription() {
   }
 
   // ===== PWA install button =====
-  // Chrome fires beforeinstallprompt when it decides the page is
-  // installable; we capture it instead of letting Chrome show its own
-  // mini-infobar, and surface our own visible button instead.
-  let deferredInstallPrompt = null;
+  // The actual beforeinstallprompt listener lives in <head> (see above) so
+  // it can't miss an early-firing event. This just wires up the button UI
+  // to whatever got captured, whenever it got captured - before or after
+  // this script runs.
   const installBtn = document.getElementById('pwa-install-btn');
 
   function isAlreadyInstalled() {
@@ -48508,25 +48520,26 @@ function resetJazzBarDescription() {
       || window.navigator.standalone === true; // iOS home-screen check
   }
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    if (isAlreadyInstalled()) return;
-    deferredInstallPrompt = e;
-    installBtn.classList.add('show');
-  });
+  function showInstallBtnIfEligible() {
+    if (window.__deferredInstallPrompt && !isAlreadyInstalled()) {
+      installBtn.classList.add('show');
+    }
+  }
+  window.__onInstallPromptCaptured = showInstallBtnIfEligible;
+  showInstallBtnIfEligible(); // in case it already fired before this ran
 
   function handlePwaInstallClick() {
-    if (!deferredInstallPrompt) return;
+    if (!window.__deferredInstallPrompt) return;
     installBtn.classList.remove('show');
-    deferredInstallPrompt.prompt();
-    deferredInstallPrompt.userChoice.finally(() => {
-      deferredInstallPrompt = null;
+    window.__deferredInstallPrompt.prompt();
+    window.__deferredInstallPrompt.userChoice.finally(() => {
+      window.__deferredInstallPrompt = null;
     });
   }
 
   window.addEventListener('appinstalled', () => {
     installBtn.classList.remove('show');
-    deferredInstallPrompt = null;
+    window.__deferredInstallPrompt = null;
   });
 </script>
 
