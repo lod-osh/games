@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TURF WAR</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #0a0a0a; 
+            color: #00ff00; 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.4; 
+        }
+        .game-container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: #1a1a1a; 
+            padding: 20px; 
+            border: 2px solid #00ff00; 
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid #00ff00; 
+            padding-bottom: 10px; 
+        }
+        .stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            padding: 10px; 
+            border: 1px solid #00ff00; 
+        }
+        .location-info { 
+            margin-bottom: 20px; 
+            padding: 15px; 
+            border: 1px solid #00ff00; 
+        }
+        .markets { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 20px; 
+        }
+        .market { 
+            padding: 10px; 
+            border: 1px solid #00ff00; 
+            background: #0f0f0f; 
+        }
+        .market-title { 
+            color: #ffff00; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+        }
+        .market-item { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 5px 0; 
+        }
+        .actions { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 10px; 
+            margin-bottom: 20px; 
+        }
+        .action-group { 
+            padding: 15px; 
+            border: 1px solid #00ff00; 
+        }
+        .action-title { 
+            color: #ffff00; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+        }
+        select {
+            background: #0a0a0a;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px;
+            font-family: inherit;
+            font-size: 12px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        select option {
+            background: #0a0a0a;
+            color: #00ff00;
+        }
+        button { 
+            background: #0a0a0a; 
+            color: #00ff00; 
+            border: 1px solid #00ff00; 
+            padding: 5px 10px; 
+            margin: 2px; 
+            cursor: pointer; 
+            font-family: inherit; 
+            font-size: 12px;
+        }
+        button:hover { 
+            background: #00ff00; 
+            color: #0a0a0a; 
+        }
+        button:disabled { 
+            color: #444; 
+            border-color: #444; 
+            cursor: not-allowed; 
+        }
+        input { 
+            background: #0a0a0a; 
+            color: #00ff00; 
+            border: 1px solid #00ff00; 
+            padding: 5px; 
+            width: 60px; 
+            font-family: inherit; 
+        }
+        .log { 
+            height: 150px; 
+            overflow-y: scroll; 
+            border: 1px solid #00ff00; 
+            padding: 10px; 
+            background: #0f0f0f; 
+        }
+        .danger { color: #ff0000; }
+        .success { color: #00ffff; }
+        .warning { color: #ffff00; }
+        .ally { color: #00ff00; }
+        .neutral { color: #ffaa00; }
+        .hostile { color: #ff0000; }
+        .special { color: #ff00ff; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>TURF WAR</h1>
+            <div>Day <span id="day">1</span> | Current Location: <span id="location">Downtown</span></div>
+        </div>
+        
+        <div class="stats">
+            <div>Cash: $<span id="cash">2000</span></div>
+            <div>Crew: <span id="crew">3</span>/8</div>
+            <div>Heat: <span id="heat">1</span></div>
+            <div>Guns: <span id="guns">1</span></div>
+            <div>Territory: <span id="territory">1</span>/30</div>
+            <div>Combat: <span id="combat">4</span></div>
+        </div>
+        
+        <div class="location-info" id="location-info">
+            Downtown - The city center. Neutral ground with moderate opportunities.
+        </div>
+        
+        <div class="location-info">
+            <div class="action-title">RIVAL GANGS IN AREA</div>
+            <div id="rival-info">No rival gangs detected</div>
+        </div>
+        
+        <div class="markets">
+            <div class="market">
+                <div class="market-title">PROTECTION RACKETS</div>
+                <div class="market-item">
+                    <span>Collect from businesses</span>
+                    <span>$<span id="protection-price">300</span></span>
+                </div>
+                <div class="market-item">
+                    <button onclick="collectProtection()">Collect Money</button>
+                </div>
+            </div>
+            
+            <div class="market">
+                <div class="market-title">SMUGGLING</div>
+                <div class="market-item">
+                    <span>Run contraband</span>
+                    <span>$<span id="smuggling-price">600</span></span>
+                </div>
+                <div class="market-item">
+                    <button onclick="runSmuggling()">Run Job</button>
+                </div>
+            </div>
+            
+            <div class="market">
+                <div class="market-title">RECRUITMENT</div>
+                <div class="market-item">
+                    <span>Hire muscle</span>
+                    <span>$<span id="recruit-price">500</span></span>
+                </div>
+                <div class="market-item">
+                    <button onclick="recruitCrew()" id="recruit-btn">Hire</button>
+                </div>
+            </div>
+            
+            <div class="market">
+                <div class="market-title">WEAPONS</div>
+                <div class="market-item">
+                    <span>Pistols (each)</span>
+                    <span>$<span id="gun-price">800</span></span>
+                </div>
+                <div class="market-item">
+                    <input type="number" id="gun-quantity" min="1" max="10" value="1" style="width: 40px;" oninput="updateButtons()">
+                    <button onclick="buyGuns()" id="gun-btn">Buy</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <div class="action-group">
+                <div class="action-title">COMMANDS</div>
+                <button onclick="layLow()" id="laylow-btn">Lay Low</button>
+                <button onclick="checkStats()">Status Report</button>
+            </div>
+            
+            <div class="action-group">
+                <div class="action-title">MOVEMENT</div>
+                <select id="location-select" onchange="updateButtons()">
+                    <option value="Downtown">Downtown</option>
+                    <option value="University">University</option>
+                    <option value="Waterfront">Waterfront</option>
+                    <option value="Suburbs">Suburbs</option>
+                    <option value="Mall">Mall</option>
+                    <option value="Docks">Docks</option>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Airport">Airport</option>
+                    <option value="Chinatown">Chinatown</option>
+                    <option value="Redlight">Red Light</option>
+                    <option value="Projects">Projects</option>
+                    <option value="Casino">Casino</option>
+                </select>
+                <button onclick="travelToSelected()" id="travel-btn">Travel</button>
+            </div>
+            
+            <div class="action-group">
+                <div class="action-title">TERRITORY WAR</div>
+                <button onclick="attackRivalGang()" id="attack-btn">Attack Rival Gang</button>
+                <button onclick="defendTerritory()" id="defend-btn">Fortify Position</button>
+                <button onclick="scout()" id="scout-btn">Scout Area</button>
+            </div>
+            
+            <div class="action-group">
+                <div class="action-title">DIPLOMACY</div>
+                <button onclick="proposeAlliance()" id="alliance-btn">Propose Alliance</button>
+                <button onclick="requestBackup()" id="backup-btn">Request Backup</button>
+                <button onclick="requestLoan()" id="loan-btn">Request Loan</button>
+                <button onclick="betrayAlliance()" id="betray-btn">Betray Alliance</button>
+            </div>
+        </div>
+        
+        <div class="log" id="log">
+            <div>You start with a small crew in Downtown. Build your criminal empire through force or diplomacy across 12 districts...</div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            cash: 2000,  // Increased starting cash
+            crew: 3,
+            maxCrew: 8,
+            heat: 1,
+            guns: 1,
+            territory: 1,
+            day: 1,
+            currentLocation: 'Downtown',
+            gameOver: false,
+            loans: [],
+            backupCooldown: 0,
+            controlledTerritories: ['Downtown']
+        };
+
+        // Simplified rival gangs
+        let rivalGangs = {
+            'Downtown': { 
+                name: 'Street Punks', 
+                strength: 6, 
+                territory: 2, 
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Docks': { 
+                name: 'Harbor Wolves', 
+                strength: 8, 
+                territory: 3, 
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Suburbs': { 
+                name: 'Family Crew', 
+                strength: 7, 
+                territory: 3, 
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Industrial': { 
+                name: 'Iron Workers', 
+                strength: 9, 
+                territory: 4, 
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Chinatown': { 
+                name: 'Red Dragons', 
+                strength: 12, 
+                territory: 3, 
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'University': {
+                name: 'Tech Hackers',
+                strength: 5,
+                territory: 2,
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Waterfront': {
+                name: 'Sea Devils',
+                strength: 10,
+                territory: 4,
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Mall': {
+                name: 'Youth Syndicate',
+                strength: 6,
+                territory: 2,
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Airport': {
+                name: 'Sky Runners',
+                strength: 8,
+                territory: 3,
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Redlight': {
+                name: 'Neon Cartel',
+                strength: 11,
+                territory: 3,
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Projects': {
+                name: 'Block Warriors',
+                strength: 10,
+                territory: 2,
+                defeated: false,
+                relationship: 'hostile'
+            },
+            'Casino': {
+                name: 'High Rollers',
+                strength: 9,
+                territory: 4,
+                defeated: false,
+                relationship: 'hostile'
+            }
+        };
+
+        // Simplified locations with fixed prices
+        const locations = {
+            'Downtown': {
+                desc: 'The city center. Neutral ground with moderate opportunities.',
+                protection: 300,
+                smuggling: 600,
+                recruit: 500,
+                guns: 800,
+                heatRisk: 0.1
+            },
+            'Docks': {
+                desc: 'Shipping district. High smuggling profits, dangerous.',
+                protection: 200,
+                smuggling: 1000,
+                recruit: 400,
+                guns: 600,
+                heatRisk: 0.2
+            },
+            'Suburbs': {
+                desc: 'Residential area. Safe protection rackets.',
+                protection: 450,
+                smuggling: 300,
+                recruit: 600,
+                guns: 1000,
+                heatRisk: 0.05
+            },
+            'Industrial': {
+                desc: 'Factory district. Cheap weapons.',
+                protection: 250,
+                smuggling: 500,
+                recruit: 450,
+                guns: 400,
+                heatRisk: 0.15
+            },
+            'Chinatown': {
+                desc: 'High risk, high reward.',
+                protection: 600,
+                smuggling: 1200,
+                recruit: 700,
+                guns: 300,
+                heatRisk: 0.3
+            },
+            'University': {
+                desc: 'Easy recruitment, low heat.',
+                protection: 200,
+                smuggling: 400,
+                recruit: 250,
+                guns: 1200,
+                heatRisk: 0.03
+            },
+            'Waterfront': {
+                desc: 'Rich targets, heavy police.',
+                protection: 700,
+                smuggling: 800,
+                recruit: 800,
+                guns: 900,
+                heatRisk: 0.25
+            },
+            'Mall': {
+                desc: 'Moderate everything.',
+                protection: 300,
+                smuggling: 350,
+                recruit: 400,
+                guns: 700,
+                heatRisk: 0.08
+            },
+            'Airport': {
+                desc: 'Huge smuggling potential.',
+                protection: 400,
+                smuggling: 1500,
+                recruit: 600,
+                guns: 1000,
+                heatRisk: 0.4
+            },
+            'Redlight': {
+                desc: 'Vice district profits.',
+                protection: 800,
+                smuggling: 600,
+                recruit: 500,
+                guns: 600,
+                heatRisk: 0.12
+            },
+            'Projects': {
+                desc: 'Cheap recruitment.',
+                protection: 150,
+                smuggling: 400,
+                recruit: 200,
+                guns: 400,
+                heatRisk: 0.2
+            },
+            'Casino': {
+                desc: 'Money laundering opportunities.',
+                protection: 900,
+                smuggling: 700,
+                recruit: 900,
+                guns: 700,
+                heatRisk: 0.18
+            }
+        };
+
+        function log(message, type = '') {
+            const logDiv = document.getElementById('log');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function calculateCombatPower(crew, guns) {
+            const armed = Math.min(crew, guns);
+            const unarmed = crew - armed;
+            return (armed * 3) + (unarmed * 1);
+        }
+
+        function updateDisplay() {
+            document.getElementById('cash').textContent = gameState.cash;
+            document.getElementById('crew').textContent = gameState.crew;
+            document.getElementById('heat').textContent = gameState.heat;
+            document.getElementById('guns').textContent = gameState.guns;
+            document.getElementById('territory').textContent = gameState.territory;
+            document.getElementById('day').textContent = gameState.day;
+            document.getElementById('location').textContent = gameState.currentLocation;
+            document.getElementById('combat').textContent = calculateCombatPower(gameState.crew, gameState.guns);
+            
+            // Update location dropdown
+            document.getElementById('location-select').value = gameState.currentLocation;
+            
+            const loc = locations[gameState.currentLocation];
+            document.getElementById('location-info').textContent = 
+                gameState.currentLocation + ' - ' + loc.desc;
+            
+            updateRivalInfo();
+            updatePrices();
+            updateButtons();
+        }
+
+        function updateRivalInfo() {
+            const rival = rivalGangs[gameState.currentLocation];
+            const rivalDiv = document.getElementById('rival-info');
+            
+            if (rivalDiv) {
+                if (rival.defeated) {
+                    rivalDiv.innerHTML = '<span class="success">Area secured - no rival gangs</span>';
+                } else {
+                    const relationshipClass = rival.relationship;
+                    rivalDiv.innerHTML = `<span class="${relationshipClass}">${rival.name}</span> - Strength: ${rival.strength} | Status: <span class="${relationshipClass}">${rival.relationship.toUpperCase()}</span>`;
+                }
+            }
+        }
+
+        function updatePrices() {
+            const loc = locations[gameState.currentLocation];
+            
+            document.getElementById('protection-price').textContent = loc.protection;
+            document.getElementById('smuggling-price').textContent = loc.smuggling;
+            document.getElementById('recruit-price').textContent = loc.recruit;
+            document.getElementById('gun-price').textContent = loc.guns;
+        }
+
+        function updateButtons() {
+            const loc = locations[gameState.currentLocation];
+            const gunQuantity = parseInt(document.getElementById('gun-quantity').value) || 1;
+            const totalGunPrice = loc.guns * gunQuantity;
+            const rival = rivalGangs[gameState.currentLocation];
+            
+            document.getElementById('recruit-btn').disabled = 
+                gameState.cash < loc.recruit || gameState.crew >= gameState.maxCrew;
+            document.getElementById('gun-btn').disabled = gameState.cash < totalGunPrice;
+            document.getElementById('attack-btn').disabled = 
+                gameState.crew < 3 || gameState.guns < 1 || rival.defeated || rival.relationship === 'allied';
+            document.getElementById('defend-btn').disabled = gameState.crew < 2 || gameState.territory < 2;
+            document.getElementById('scout-btn').disabled = rival.defeated;
+            document.getElementById('laylow-btn').disabled = gameState.heat < 2;
+            
+            // Diplomacy buttons
+            document.getElementById('alliance-btn').disabled = 
+                rival.defeated || rival.relationship === 'allied';
+            document.getElementById('backup-btn').disabled = 
+                rival.defeated || rival.relationship !== 'allied' || gameState.backupCooldown > 0;
+            document.getElementById('loan-btn').disabled = 
+                rival.defeated || rival.relationship !== 'allied';
+            document.getElementById('betray-btn').disabled = 
+                rival.defeated || rival.relationship !== 'allied';
+        }
+
+        function collectProtection() {
+            const loc = locations[gameState.currentLocation];
+            const amount = loc.protection;
+            
+            if (Math.random() < 0.15) {
+                log('Protection collection failed! Targets refused to pay.', 'danger');
+                gameState.heat += 1;
+            } else {
+                gameState.cash += amount;
+                log(`Collected $${amount} from local businesses.`, 'success');
+                
+                if (Math.random() < loc.heatRisk) {
+                    gameState.heat += 1;
+                    log('Witnesses called police.', 'warning');
+                }
+            }
+            
+            advanceTime();
+        }
+
+        function runSmuggling() {
+            const loc = locations[gameState.currentLocation];
+            const amount = loc.smuggling;
+            
+            if (Math.random() < 0.2) {
+                log('Smuggling run failed! Lost the shipment.', 'danger');
+                gameState.heat += 2;
+            } else {
+                gameState.cash += amount;
+                log(`Smuggling successful. Earned $${amount}.`, 'success');
+                
+                if (Math.random() < loc.heatRisk * 1.5) {
+                    gameState.heat += 1;
+                    log('Authorities are suspicious.', 'warning');
+                }
+            }
+            
+            advanceTime();
+        }
+
+        function recruitCrew() {
+            const loc = locations[gameState.currentLocation];
+            const cost = loc.recruit;
+            
+            if (gameState.cash < cost) {
+                log(`Not enough cash! Need $${cost}.`, 'danger');
+                return;
+            }
+            
+            if (gameState.crew >= gameState.maxCrew) {
+                log(`Crew at maximum capacity.`, 'warning');
+                return;
+            }
+            
+            if (Math.random() < 0.1) {
+                gameState.cash -= cost;
+                log(`Recruitment failed! Lost $${cost}.`, 'danger');
+            } else {
+                gameState.cash -= cost;
+                gameState.crew += 1;
+                log(`Recruited new muscle for $${cost}.`, 'success');
+            }
+            
+            advanceTime();
+        }
+
+        function buyGuns() {
+            const loc = locations[gameState.currentLocation];
+            const pricePerGun = loc.guns;
+            const quantity = parseInt(document.getElementById('gun-quantity').value) || 1;
+            const totalPrice = pricePerGun * quantity;
+            
+            if (gameState.cash < totalPrice) {
+                log(`Not enough cash! Need $${totalPrice}.`, 'danger');
+                return;
+            }
+            
+            gameState.cash -= totalPrice;
+            gameState.guns += quantity;
+            log(`Bought ${quantity} weapon${quantity > 1 ? 's' : ''} for $${totalPrice}.`, 'success');
+            advanceTime();
+        }
+
+        function attackRivalGang() {
+            const rival = rivalGangs[gameState.currentLocation];
+            if (gameState.crew < 3 || gameState.guns < 1 || rival.defeated) return;
+            
+            const ourPower = calculateCombatPower(gameState.crew, gameState.guns);
+            const theirPower = rival.strength;
+            
+            const casualties = Math.floor(Math.random() * 2) + 1;
+            gameState.crew = Math.max(1, gameState.crew - casualties);
+            gameState.heat += 3;
+            
+            if (ourPower > theirPower) {
+                if (!gameState.controlledTerritories.includes(gameState.currentLocation)) {
+                    gameState.controlledTerritories.push(gameState.currentLocation);
+                }
+                
+                gameState.territory += rival.territory;
+                rival.defeated = true;
+                const bonus = rival.strength * 100;
+                gameState.cash += bonus;
+                log(`Victory! Destroyed ${rival.name}. Gained ${rival.territory} territories and $${bonus}.`, 'success');
+                log(`Lost ${casualties} crew in the fight.`, 'warning');
+            } else {
+                const cashLoss = Math.floor(Math.random() * 500) + 200;
+                gameState.cash = Math.max(0, gameState.cash - cashLoss);
+                log(`Attack failed! Lost ${casualties} crew and $${cashLoss}.`, 'danger');
+            }
+            
+            advanceTime();
+        }
+
+        function defendTerritory() {
+            if (gameState.crew < 2 || gameState.territory < 2) return;
+            
+            const cost = gameState.territory * 50;
+            gameState.cash = Math.max(0, gameState.cash - cost);
+            
+            const income = gameState.territory * 100;
+            gameState.cash += income;
+            gameState.heat = Math.max(0, gameState.heat - 1);
+            
+            log(`Fortified territories for $${cost}. Generated $${income}.`, 'success');
+            
+            advanceTime();
+        }
+
+        function travelToSelected() {
+            const select = document.getElementById('location-select');
+            const selectedLocation = select.value;
+            if (selectedLocation && selectedLocation !== gameState.currentLocation) {
+                gameState.currentLocation = selectedLocation;
+                log(`Traveled to ${selectedLocation}.`);
+                
+                if (Math.random() < 0.1) {
+                    gameState.heat = Math.max(0, gameState.heat - 1);
+                    log('Moving helped reduce heat.', 'success');
+                }
+                
+                updateDisplay();
+            }
+        }
+
+        function scout() {
+            const rival = rivalGangs[gameState.currentLocation];
+            if (rival.defeated) return;
+            
+            const ourPower = calculateCombatPower(gameState.crew, gameState.guns);
+            const theirPower = rival.strength;
+            
+            log(`Intel: ${rival.name} strength ${theirPower} vs your ${ourPower}.`, 'success');
+            
+            if (ourPower > theirPower + 2) {
+                log('You have strong advantage.', 'success');
+            } else if (ourPower > theirPower) {
+                log('You have slight advantage.', 'success');
+            } else {
+                log('They are stronger. Build up first.', 'danger');
+            }
+            
+            if (Math.random() < 0.3) {
+                const bonus = Math.floor(Math.random() * 200) + 100;
+                gameState.cash += bonus;
+                log(`Found unguarded stash! Gained $${bonus}.`, 'success');
+            }
+            
+            advanceTime();
+        }
+
+        function proposeAlliance() {
+            const rival = rivalGangs[gameState.currentLocation];
+            if (rival.defeated || rival.relationship === 'allied') return;
+            
+            const cost = rival.strength * 50;
+            if (gameState.cash < cost) {
+                log(`${rival.name} demand $${cost} for alliance.`, 'danger');
+                return;
+            }
+            
+            gameState.cash -= cost;
+            rival.relationship = 'allied';
+            log(`Alliance formed with ${rival.name} for $${cost}.`, 'ally');
+            
+            advanceTime();
+        }
+
+        function requestBackup() {
+            const rival = rivalGangs[gameState.currentLocation];
+            if (rival.relationship !== 'allied' || gameState.backupCooldown > 0) return;
+            
+            const backup = Math.floor(rival.strength / 4) + 1;
+            gameState.crew += backup;
+            gameState.backupCooldown = 5;
+            
+            log(`${rival.name} sent ${backup} backup fighters.`, 'ally');
+            advanceTime();
+        }
+
+        function requestLoan() {
+            const rival = rivalGangs[gameState.currentLocation];
+            if (rival.relationship !== 'allied') return;
+            
+            const amount = rival.strength * 100;
+            gameState.cash += amount;
+            
+            gameState.loans.push({
+                amount: amount,
+                dueDay: gameState.day + 10,
+                gang: rival.name,
+                repayAmount: Math.floor(amount * 1.2)
+            });
+            
+            log(`Borrowed $${amount} from ${rival.name}.`, 'ally');
+            advanceTime();
+        }
+
+        function betrayAlliance() {
+            const rival = rivalGangs[gameState.currentLocation];
+            if (rival.relationship !== 'allied') return;
+            
+            rival.relationship = 'hostile';
+            
+            const ourPower = calculateCombatPower(gameState.crew, gameState.guns) + 3; // Surprise bonus
+            if (ourPower > rival.strength) {
+                gameState.territory += rival.territory;
+                rival.defeated = true;
+                const bonus = rival.strength * 75;
+                gameState.cash += bonus;
+                log(`Betrayal successful! Eliminated ${rival.name}.`, 'success');
+            } else {
+                const loss = Math.floor(Math.random() * 2) + 1;
+                gameState.crew = Math.max(1, gameState.crew - loss);
+                log(`Betrayal failed! Lost ${loss} crew.`, 'danger');
+            }
+            
+            gameState.heat += 4;
+            advanceTime();
+        }
+
+        function layLow() {
+            if (gameState.heat < 2) return;
+            
+            gameState.heat = Math.max(0, gameState.heat - 2);
+            log('Laid low. Heat reduced.', 'success');
+            
+            if (Math.random() < 0.3 && gameState.crew < gameState.maxCrew) {
+                gameState.crew += 1;
+                log('Recruited someone while laying low.', 'success');
+            }
+            
+            advanceTime();
+        }
+
+        function checkStats() {
+            const ourPower = calculateCombatPower(gameState.crew, gameState.guns);
+            const dailyIncome = gameState.territory * 50;
+            const dailyExpenses = gameState.crew * 15;
+            
+            log(`Combat Power: ${ourPower}`, 'success');
+            log(`Daily Income: $${dailyIncome}`, 'success');
+            log(`Daily Expenses: $${dailyExpenses}`, 'danger');
+            log(`Net Daily: $${dailyIncome - dailyExpenses}`, dailyIncome > dailyExpenses ? 'success' : 'danger');
+            
+            if (gameState.controlledTerritories.length > 0) {
+                log(`Controlled: ${gameState.controlledTerritories.join(', ')}`, 'success');
+            }
+            
+            if (gameState.loans.length > 0) {
+                gameState.loans.forEach(loan => {
+                    const daysLeft = loan.dueDay - gameState.day;
+                    log(`Loan: $${loan.repayAmount} due in ${daysLeft} days`, 'warning');
+                });
+            }
+        }
+
+        function advanceTime() {
+            gameState.day += 1;
+            
+            // Daily income/expenses
+            const income = gameState.territory * 50;
+            const expenses = gameState.crew * 15;
+            gameState.cash += income - expenses;
+            
+            // Random events (simplified)
+            const eventRoll = Math.random();
+            if (eventRoll < 0.05) {
+                const bonus = Math.floor(Math.random() * 300) + 100;
+                gameState.cash += bonus;
+                log(`Found money stash: +${bonus}`, 'success');
+            } else if (eventRoll < 0.08) {
+                const loss = Math.floor(Math.random() * 200) + 50;
+                gameState.cash = Math.max(0, gameState.cash - loss);
+                log(`Pickpocketed: -${loss}`, 'danger');
+            } else if (eventRoll < 0.12) {
+                if (gameState.crew < gameState.maxCrew) {
+                    gameState.crew += 1;
+                    log('New recruit joined voluntarily.', 'success');
+                }
+            }
+            
+            // Territory loss (rare)
+            if (gameState.territory > 2 && Math.random() < 0.03) {
+                const loseableTerritory = gameState.controlledTerritories.filter(t => t !== 'Downtown');
+                if (loseableTerritory.length > 0) {
+                    const lost = loseableTerritory[Math.floor(Math.random() * loseableTerritory.length)];
+                    gameState.controlledTerritories = gameState.controlledTerritories.filter(t => t !== lost);
+                    gameState.territory -= 1;
+                    
+                    if (rivalGangs[lost]) {
+                        rivalGangs[lost].defeated = false;
+                        rivalGangs[lost].relationship = 'hostile';
+                    }
+                    
+                    log(`Lost territory: ${lost}`, 'danger');
+                }
+            }
+            
+            // Heat events
+            if (gameState.heat > 5 && Math.random() < 0.2) {
+                const raid = Math.floor(Math.random() * 2) + 1;
+                gameState.crew = Math.max(1, gameState.crew - raid);
+                gameState.heat = Math.max(0, gameState.heat - 2);
+                log(`Police raid! Lost ${raid} crew.`, 'danger');
+            }
+            
+            // Process loans
+            gameState.loans = gameState.loans.filter(loan => {
+                if (gameState.day >= loan.dueDay) {
+                    if (gameState.cash >= loan.repayAmount) {
+                        gameState.cash -= loan.repayAmount;
+                        log(`Repaid loan: ${loan.repayAmount}`, 'success');
+                    } else {
+                        const loss = Math.floor(Math.random() * 2) + 1;
+                        gameState.crew = Math.max(1, gameState.crew - loss);
+                        gameState.heat += 2;
+                        log(`Loan default! Lost ${loss} crew to debt collectors.`, 'danger');
+                    }
+                    return false;
+                }
+                return true;
+            });
+            
+            // Reduce cooldowns
+            if (gameState.backupCooldown > 0) {
+                gameState.backupCooldown--;
+            }
+            
+            // Victory/defeat checks
+            if (gameState.crew <= 0 || gameState.heat > 8) {
+                gameState.gameOver = true;
+                log('GAME OVER!', 'danger');
+            }
+            
+            const totalRivalTerritory = Object.values(rivalGangs).reduce((sum, gang) => 
+                gang.defeated ? sum : sum + gang.territory, 0);
+            if (totalRivalTerritory === 0) {
+                gameState.gameOver = true;
+                log('VICTORY! All gangs eliminated!', 'success');
+            }
+            
+            updateDisplay();
+        }
+
+        // Initialize game
+        updateDisplay();
+    </script>
+</body>
+</html>

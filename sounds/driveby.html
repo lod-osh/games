@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drive-By Shooting Mini-Game</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #0a0a0a; 
+            color: #00ff00; 
+            margin: 0; 
+            padding: 10px; 
+            line-height: 1.4; 
+        }
+        .game-container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: #1a1a1a; 
+            padding: 15px; 
+            border: 2px solid #00ff00; 
+        }
+        .street-view {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(to bottom, #444 0%, #333 50%, #222 100%);
+            position: relative;
+            border: 2px solid #ff6600;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .street-divider {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                #ffff00 0px,
+                #ffff00 10px,
+                transparent 10px,
+                transparent 20px
+            );
+        }
+        .car {
+            position: absolute;
+            bottom: 40px;
+            left: -60px;
+            width: 50px;
+            height: 25px;
+            z-index: 10;
+        }
+        .car.moving {
+            animation: drive 5s linear forwards;
+        }
+        .enemy {
+            position: absolute;
+            width: 12px;
+            height: 18px;
+            z-index: 5;
+            transition: all 0.2s;
+        }
+        .enemy.hit {
+            transform: scale(1.5) rotate(90deg);
+        }
+        .enemy.dead {
+            opacity: 0.3;
+        }
+        .bullet {
+            position: absolute;
+            width: 2px;
+            height: 8px;
+            background: #ffff00;
+            border-radius: 1px;
+            z-index: 8;
+        }
+        .sidewalk {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: #666;
+            border-bottom: 2px solid #888;
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            color: #ff6600;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .shoot-btn {
+            background: #ff0000;
+            border: none;
+            color: white;
+            padding: 18px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 200px;
+        }
+        .shoot-btn:hover {
+            background: #cc0000;
+        }
+        .shoot-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        @keyframes drive {
+            0% { left: -60px; }
+            100% { left: 100%; }
+        }
+        .results {
+            margin-top: 15px;
+            padding: 12px;
+            background: #2a1a0a;
+            border: 1px solid #ff6600;
+        }
+        .instructions {
+            background: #0a2a0a;
+            padding: 12px;
+            border: 1px solid #00ff00;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        @media (max-width: 500px) {
+            .shoot-btn {
+                width: 90%;
+                padding: 20px 20px;
+                font-size: 20px;
+            }
+            .hud {
+                font-size: 14px;
+            }
+            .street-view {
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 style="text-align: center; color: #ff6600; margin: 10px 0;">DRIVE-BY SHOOTING</h1>
+        
+        <div class="instructions">
+            <strong>MISSION:</strong> Hit rival gang members on the sidewalk as you drive past.<br>
+            <strong>CONTROLS:</strong> Tap SHOOT when enemies are lined up with your car.<br>
+            <strong>TIP:</strong> Bullets fire sideways from your car toward the sidewalk!
+        </div>
+        
+        <div class="hud">
+            <div>AMMO: <span id="ammo">8</span></div>
+            <div>HITS: <span id="hits">0</span></div>
+            <div>TIME: <span id="timer">5.0s</span></div>
+        </div>
+        
+        <div class="street-view" id="street">
+            <div class="sidewalk"></div>
+            <div class="street-divider"></div>
+            
+            <!-- Car SVG -->
+            <svg class="car" id="car" viewBox="0 0 50 25">
+                <rect x="8" y="5" width="34" height="15" fill="#444" stroke="#666" stroke-width="1"/>
+                <rect x="10" y="7" width="8" height="4" fill="#87CEEB" opacity="0.7"/>
+                <rect x="22" y="7" width="8" height="4" fill="#87CEEB" opacity="0.7"/>
+                <rect x="32" y="7" width="8" height="4" fill="#87CEEB" opacity="0.7"/>
+                <circle cx="15" cy="22" r="3" fill="#333" stroke="#666"/>
+                <circle cx="35" cy="22" r="3" fill="#333" stroke="#666"/>
+                <rect x="42" y="8" width="6" height="9" fill="#ff6600"/>
+            </svg>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="shoot-btn" id="startBtn" onclick="startDriveBy()">START DRIVE-BY</button>
+            <button class="shoot-btn" id="shootBtn" onclick="shoot()" disabled style="display: none;">SHOOT</button>
+        </div>
+        
+        <div class="results" id="results" style="display: none;">
+            <h3 style="color: #ff6600; margin: 10px 0;">DRIVE-BY RESULTS</h3>
+            <div id="finalScore"></div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            active: false,
+            ammo: 8,
+            hits: 0,
+            timeLeft: 5.0,
+            enemies: [],
+            bullets: [],
+            carPosition: -60
+        };
+        
+        let gameInterval;
+        let animationFrame;
+        
+        function createEnemySVG() {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("viewBox", "0 0 12 18");
+            svg.setAttribute("width", "12");
+            svg.setAttribute("height", "18");
+            
+            // Head
+            const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            head.setAttribute("cx", "6");
+            head.setAttribute("cy", "3");
+            head.setAttribute("r", "2.5");
+            head.setAttribute("fill", "#ffddaa");
+            head.setAttribute("stroke", "#000");
+            head.setAttribute("stroke-width", "0.5");
+            
+            // Body
+            const body = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            body.setAttribute("x", "4");
+            body.setAttribute("y", "6");
+            body.setAttribute("width", "4");
+            body.setAttribute("height", "7");
+            body.setAttribute("fill", "#ff0000");
+            body.setAttribute("stroke", "#000");
+            body.setAttribute("stroke-width", "0.5");
+            
+            // Arms
+            const leftArm = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            leftArm.setAttribute("x", "1");
+            leftArm.setAttribute("y", "7");
+            leftArm.setAttribute("width", "3");
+            leftArm.setAttribute("height", "1.5");
+            leftArm.setAttribute("fill", "#ffddaa");
+            leftArm.setAttribute("stroke", "#000");
+            leftArm.setAttribute("stroke-width", "0.3");
+            
+            const rightArm = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rightArm.setAttribute("x", "8");
+            rightArm.setAttribute("y", "7");
+            rightArm.setAttribute("width", "3");
+            rightArm.setAttribute("height", "1.5");
+            rightArm.setAttribute("fill", "#ffddaa");
+            rightArm.setAttribute("stroke", "#000");
+            rightArm.setAttribute("stroke-width", "0.3");
+            
+            // Legs
+            const leftLeg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            leftLeg.setAttribute("x", "4.5");
+            leftLeg.setAttribute("y", "13");
+            leftLeg.setAttribute("width", "1.5");
+            leftLeg.setAttribute("height", "4");
+            leftLeg.setAttribute("fill", "#0000ff");
+            leftLeg.setAttribute("stroke", "#000");
+            leftLeg.setAttribute("stroke-width", "0.3");
+            
+            const rightLeg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rightLeg.setAttribute("x", "6");
+            rightLeg.setAttribute("y", "13");
+            rightLeg.setAttribute("width", "1.5");
+            rightLeg.setAttribute("height", "4");
+            rightLeg.setAttribute("fill", "#0000ff");
+            rightLeg.setAttribute("stroke", "#000");
+            rightLeg.setAttribute("stroke-width", "0.3");
+            
+            svg.appendChild(head);
+            svg.appendChild(body);
+            svg.appendChild(leftArm);
+            svg.appendChild(rightArm);
+            svg.appendChild(leftLeg);
+            svg.appendChild(rightLeg);
+            
+            return svg;
+        }
+        
+        function startDriveBy() {
+            // Reset game state
+            gameState = {
+                active: true,
+                ammo: 8,
+                hits: 0,
+                timeLeft: 5.0,
+                enemies: [],
+                bullets: [],
+                carPosition: -60
+            };
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('shootBtn').style.display = 'inline';
+            document.getElementById('shootBtn').disabled = false;
+            document.getElementById('results').style.display = 'none';
+            
+            // Start car animation
+            const car = document.getElementById('car');
+            car.style.left = '-60px';
+            car.classList.add('moving');
+            
+            // Start game timer
+            gameInterval = setInterval(updateGame, 100);
+            
+            // Spawn enemies
+            spawnEnemies();
+            
+            // Start animation loop
+            animateGame();
+            
+            updateHUD();
+        }
+        
+        function spawnEnemies() {
+            const street = document.getElementById('street');
+            
+            // Clear existing enemies
+            document.querySelectorAll('.enemy').forEach(e => e.remove());
+            gameState.enemies = [];
+            
+            // Spawn 10-14 enemies on the sidewalk only
+            const enemyCount = Math.floor(Math.random() * 5) + 10;
+            
+            for (let i = 0; i < enemyCount; i++) {
+                const enemy = createEnemySVG();
+                enemy.classList.add('enemy');
+                
+                // Position enemies on sidewalk (top 80px area)
+                enemy.style.position = 'absolute';
+                enemy.style.left = `${80 + (i * 35) + Math.random() * 20}px`;
+                enemy.style.top = `${10 + Math.random() * 50}px`;
+                
+                street.appendChild(enemy);
+                gameState.enemies.push({
+                    element: enemy,
+                    hit: false,
+                    x: parseInt(enemy.style.left),
+                    y: parseInt(enemy.style.top)
+                });
+            }
+        }
+        
+        function updateGame() {
+            gameState.timeLeft -= 0.1;
+            
+            // Update car position for collision detection
+            const car = document.getElementById('car');
+            const carRect = car.getBoundingClientRect();
+            const streetRect = document.getElementById('street').getBoundingClientRect();
+            gameState.carPosition = carRect.left - streetRect.left;
+            
+            if (gameState.timeLeft <= 0) {
+                endDriveBy();
+                return;
+            }
+            
+            updateHUD();
+        }
+        
+        function animateGame() {
+            if (!gameState.active) return;
+            
+            // Update bullets
+            gameState.bullets.forEach((bullet, index) => {
+                bullet.y -= 3; // Move bullet toward sidewalk
+                bullet.element.style.top = bullet.y + 'px';
+                
+                // Remove bullets that are off screen
+                if (bullet.y < -10) {
+                    bullet.element.remove();
+                    gameState.bullets.splice(index, 1);
+                    return;
+                }
+                
+                // Check collision with enemies
+                gameState.enemies.forEach(enemy => {
+                    if (enemy.hit) return;
+                    
+                    const enemyX = parseInt(enemy.element.style.left);
+                    const enemyY = parseInt(enemy.element.style.top);
+                    
+                    // Check if bullet hits enemy (more forgiving hit detection)
+                    if (Math.abs(bullet.x - enemyX) < 15 && 
+                        Math.abs(bullet.y - enemyY) < 15) {
+                        hitEnemy(enemy);
+                        bullet.element.remove();
+                        gameState.bullets.splice(index, 1);
+                    }
+                });
+            });
+            
+            animationFrame = requestAnimationFrame(animateGame);
+        }
+        
+        function shoot() {
+            if (!gameState.active || gameState.ammo <= 0) return;
+            
+            gameState.ammo--;
+            
+            // Create bullet at car's current position
+            const street = document.getElementById('street');
+            const car = document.getElementById('car');
+            const carRect = car.getBoundingClientRect();
+            const streetRect = street.getBoundingClientRect();
+            
+            const bullet = document.createElement('div');
+            bullet.className = 'bullet';
+            
+            // Position bullet at front of car, firing toward sidewalk
+            const bulletX = carRect.left - streetRect.left + 45; // Front of car
+            const bulletY = 85; // Start from car level
+            
+            bullet.style.left = bulletX + 'px';
+            bullet.style.top = bulletY + 'px';
+            
+            street.appendChild(bullet);
+            
+            // Add to bullets array for tracking
+            gameState.bullets.push({
+                element: bullet,
+                x: bulletX,
+                y: bulletY
+            });
+            
+            updateHUD();
+        }
+        
+        function hitEnemy(enemyData) {
+            if (enemyData.hit) return;
+            
+            enemyData.hit = true;
+            enemyData.element.classList.add('hit');
+            gameState.hits++;
+            
+            // After a brief delay, mark as dead
+            setTimeout(() => {
+                enemyData.element.classList.remove('hit');
+                enemyData.element.classList.add('dead');
+            }, 300);
+            
+            updateHUD();
+        }
+        
+        function updateHUD() {
+            document.getElementById('ammo').textContent = gameState.ammo;
+            document.getElementById('hits').textContent = gameState.hits;
+            document.getElementById('timer').textContent = gameState.timeLeft.toFixed(1) + 's';
+        }
+        
+        function endDriveBy() {
+            gameState.active = false;
+            clearInterval(gameInterval);
+            cancelAnimationFrame(animationFrame);
+            
+            document.getElementById('shootBtn').disabled = true;
+            document.getElementById('shootBtn').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'inline';
+            document.getElementById('startBtn').textContent = 'PLAY AGAIN';
+            
+            // Remove remaining bullets
+            gameState.bullets.forEach(bullet => bullet.element.remove());
+            
+            // Show results
+            const resultsDiv = document.getElementById('results');
+            const finalScore = document.getElementById('finalScore');
+            
+            let damageDealt = gameState.hits * 2;
+            let heatGained = Math.floor(gameState.hits / 2) + 1;
+            let shotsFired = 8 - gameState.ammo;
+            let accuracy = shotsFired > 0 ? ((gameState.hits / shotsFired) * 100).toFixed(0) : 0;
+            
+            finalScore.innerHTML = `
+                <div style="color: #ff6600;">Gang Members Hit: ${gameState.hits}</div>
+                <div style="color: #ff6600;">Shots Fired: ${shotsFired}/8</div>
+                <div style="color: #ff6600;">Accuracy: ${accuracy}%</div>
+                <div style="color: #00ff00;">Enemy Strength Reduced: -${damageDealt}</div>
+                <div style="color: #ffff00;">Police Heat Gained: +${heatGained}</div>
+                <div style="margin-top: 10px;">
+                    ${gameState.hits >= 8 ? '<div style="color: #00ff00;">MASSACRE!</div>' : 
+                      gameState.hits >= 6 ? '<div style="color: #ffff00;">SOLID HIT!</div>' : 
+                      gameState.hits >= 4 ? '<div style="color: #ff9900;">DECENT WORK!</div>' : 
+                      '<div style="color: #ff0000;">WEAK SHOOTING!</div>'}
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+        }
+        
+        // Keyboard shooting (spacebar)
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameState.active) {
+                e.preventDefault();
+                shoot();
+            }
+        });
+        
+        // Touch/click optimization for mobile
+        document.getElementById('shootBtn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            shoot();
+        });
+    </script>
+</body>
+</html>

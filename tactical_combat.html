@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tactical Combat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a0a; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; }
+        #combat-container { width: 100vw; height: 100vh; display: flex; padding: 10px; gap: 10px; }
+        #left-panel { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        #combat-header { text-align: center; border-bottom: 2px solid #ffd700; padding-bottom: 5px; }
+        #combat-title { color: #ffd700; margin: 0; font-size: 20px; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        #combat-info { display: flex; justify-content: center; gap: 30px; color: #fff; font-size: 13px; margin-top: 3px; }
+        #combat-grid-container { flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #combat-grid { display: grid; gap: 1px; background: #000; border: 2px solid #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        .combat-cell { width: 28px; height: 28px; background: #2a2a2a; border: 1px solid #444; position: relative; cursor: pointer; transition: background 0.15s; }
+        .combat-cell:hover { background: #3a3a3a; }
+        .combat-cell.wall { background: #555; cursor: default; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
+        .combat-cell.selected { box-shadow: 0 0 0 2px #00ff00 inset; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 2px #00ff00 inset; } 50% { box-shadow: 0 0 0 2px #00ff00 inset, 0 0 8px #00ff00; } }
+        .combat-cell.move-range { background: rgba(100, 200, 255, 0.4); }
+        .combat-cell.attack-range { background: rgba(255, 100, 100, 0.4); }
+        .combat-unit { width: 22px; height: 22px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: pointer; transition: all 0.3s ease; }
+        .combat-unit.dead { opacity: 0.3; filter: grayscale(100%); }
+        .damage-animation { animation: damageFlash 0.5s; }
+        @keyframes damageFlash { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(2.5) hue-rotate(180deg); } }
+        .hit-marker { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff0000; font-size: 16px; font-weight: bold; pointer-events: none; animation: hitMarkerFade 1s forwards; text-shadow: 0 0 5px #000, 0 0 10px #ff0000; z-index: 200; }
+        @keyframes hitMarkerFade { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -80%) scale(1.5); } }
+        .miss-marker { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #888; font-size: 14px; pointer-events: none; animation: hitMarkerFade 1s forwards; z-index: 200; }
+        #combat-controls { display: flex; justify-content: center; gap: 10px; padding: 8px; }
+        .combat-btn { padding: 8px 20px; font-size: 13px; font-weight: bold; background: linear-gradient(to bottom, #ffd700, #cc9900); border: 2px solid #fff; border-radius: 5px; cursor: pointer; transition: all 0.2s; color: #000; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .combat-btn:hover:not(:disabled) { background: linear-gradient(to bottom, #ffed4e, #ffd700); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+        .combat-btn:disabled { opacity: 0.4; cursor: not-allowed; background: #555; }
+        #combat-unit-info { display: flex; justify-content: space-around; gap: 20px; padding: 10px; background: #1a1a1a; border-radius: 5px; border: 2px solid #ffd700; }
+        #combat-unit-info h3 { color: #ffd700; margin: 0 0 8px 0; font-size: 14px; text-align: center; }
+        .unit-status { color: #fff; font-size: 11px; padding: 2px 0; }
+        .unit-status.alive { color: #00ff00; }
+        .unit-status.dead { color: #ff0000; text-decoration: line-through; opacity: 0.5; }
+        #right-panel { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+        #combat-log { flex: 1; background: #1a1a1a; border: 2px solid #ffd700; border-radius: 5px; padding: 10px; overflow-y: auto; font-size: 11px; }
+        .log-entry { padding: 3px 0; border-bottom: 1px solid #333; }
+        .log-entry.hit { color: #ff6666; }
+        .log-entry.miss { color: #888; }
+        .log-entry.death { color: #ff0000; font-weight: bold; }
+        .log-entry.victory { color: #00ff00; font-weight: bold; }
+        .log-entry.defeat { color: #ff0000; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="combat-container">
+        <div id="left-panel">
+            <div id="combat-header">
+                <h2 id="combat-title">TACTICAL COMBAT</h2>
+                <div id="combat-info">
+                    <span id="combat-turn">Turn: 1</span>
+                    <span id="combat-phase">Your Turn</span>
+                </div>
+            </div>
+            <div id="combat-grid-container"><div id="combat-grid"></div></div>
+            <div id="combat-controls">
+                <button id="combat-move-btn" class="combat-btn">MOVE</button>
+                <button id="combat-attack-btn" class="combat-btn">ATTACK</button>
+                <button id="combat-end-turn-btn" class="combat-btn">END TURN</button>
+            </div>
+            <div id="combat-unit-info">
+                <div style="flex: 1;"><h3>YOUR FORCES</h3><div id="player-units-list"></div></div>
+                <div style="flex: 1;"><h3>ENEMY FORCES</h3><div id="enemy-units-list"></div></div>
+            </div>
+        </div>
+        <div id="right-panel"><div id="combat-log"></div></div>
+    </div>
+    <script>
+        const sounds = {
+            death: new Audio('death.mp3'),
+            steps: new Audio('steps.mp3'),
+            shoot: new Audio('shoot.mp3'),
+            ricochet: new Audio('ricochet.wav'),
+            punch: new Audio('punch.mp3'),
+            miss: new Audio('miss.mp3')
+        };
+        
+        // Combat music management - ONLY CHANGES MADE
+        let combatMusic = null;
+        
+        function startTakeoverMusic() {
+            // Stop any previous background music by sending message to parent
+            try {
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'stopMusic' }, '*');
+                }
+            } catch (e) {
+                // Ignore cross-origin errors
+            }
+            
+            // Start takeover.wav looping
+            combatMusic = new Audio('takeover.wav');
+            combatMusic.loop = true;
+            combatMusic.volume = 0.4;
+            combatMusic.play().catch(e => console.log('Takeover music failed:', e));
+        }
+        
+        function stopTakeoverMusic() {
+            if (combatMusic) {
+                combatMusic.pause();
+                combatMusic.currentTime = 0;
+                combatMusic = null;
+            }
+        }
+        // END OF MUSIC CHANGES
+        
+        function playSound(type) {
+            if (sounds[type]) {
+                sounds[type].currentTime = 0;
+                sounds[type].play().catch(e => console.log('Sound play failed:', e));
+            }
+        }
+        
+        function addLog(message, type = '') {
+            const log = document.getElementById('combat-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        let combatState = {
+            grid: [],
+            playerUnits: [],
+            enemyUnits: [],
+            selectedUnit: null,
+            turnNumber: 1,
+            phase: 'player',
+            showingMoveRange: false,
+            showingAttackRange: false
+        };
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const configData = urlParams.get('config');
+        let GRID_SIZE = 10;
+        if (configData) {
+            const config = JSON.parse(decodeURIComponent(configData));
+            const totalUnits = config.playerUnits + config.enemyUnits;
+            GRID_SIZE = totalUnits > 10 ? 20 : 10;
+            
+            const gridElement = document.getElementById('combat-grid');
+            gridElement.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 28px)`;
+            gridElement.style.gridTemplateRows = `repeat(${GRID_SIZE}, 28px)`;
+            
+            // Start takeover music - ONLY CHANGE
+            startTakeoverMusic();
+            
+            initializeCombat(config);
+        }
+        
+        function initializeCombat(config) {
+            combatState.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+            
+            addLog('=== COMBAT START ===');
+            addLog(`Your forces: ${config.playerUnits} units (${config.playerGuns} armed)`);
+            addLog(`Enemy forces: ${config.enemyUnits} units (${config.enemyArmed} armed)`);
+            
+            const wallCount = GRID_SIZE === 20 ? Math.floor(Math.random() * 12) + 8 : Math.floor(Math.random() * 6) + 3;
+            
+            for (let i = 0; i < wallCount; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * GRID_SIZE);
+                    y = Math.floor(Math.random() * GRID_SIZE);
+                } while (combatState.grid[y][x] || 
+                        (x < 3 && y < 3) || 
+                        (x >= GRID_SIZE - 3 && y >= GRID_SIZE - 3));
+                
+                combatState.grid[y][x] = { type: 'wall' };
+            }
+            
+            combatState.playerUnits = [];
+            const playerStartCols = Math.ceil(config.playerUnits / (GRID_SIZE * 0.6));
+            const playerHealth = Math.max(80, 120 - config.enemyUnits * 3);
+            
+            for (let i = 0; i < config.playerUnits; i++) {
+                const unit = {
+                    id: `player-${i}`,
+                    side: 'player',
+                    armed: i < config.playerGuns,
+                    health: playerHealth,
+                    maxHealth: playerHealth,
+                    x: 0,
+                    y: 0,
+                    hasMoved: false,
+                    hasAttacked: false,
+                    alive: true
+                };
+                
+                let placed = false;
+                for (let x = 0; x < playerStartCols && !placed; x++) {
+                    for (let y = 0; y < GRID_SIZE && !placed; y++) {
+                        if (!combatState.grid[y][x]) {
+                            unit.x = x;
+                            unit.y = y;
+                            combatState.grid[y][x] = unit;
+                            placed = true;
+                        }
+                    }
+                }
+                combatState.playerUnits.push(unit);
+            }
+            
+            combatState.enemyUnits = [];
+            const enemyStartCols = Math.ceil(config.enemyUnits / (GRID_SIZE * 0.6));
+            const enemyHealth = Math.max(60, 100 - Math.floor(GRID_SIZE * 0.2));
+            
+            for (let i = 0; i < config.enemyUnits; i++) {
+                const unit = {
+                    id: `enemy-${i}`,
+                    side: 'enemy',
+                    armed: i < config.enemyArmed,
+                    health: enemyHealth,
+                    maxHealth: enemyHealth,
+                    x: GRID_SIZE - 1,
+                    y: 0,
+                    hasMoved: false,
+                    hasAttacked: false,
+                    alive: true
+                };
+                
+                let placed = false;
+                for (let x = GRID_SIZE - 1; x >= GRID_SIZE - enemyStartCols && !placed; x--) {
+                    for (let y = 0; y < GRID_SIZE && !placed; y++) {
+                        if (!combatState.grid[y][x]) {
+                            unit.x = x;
+                            unit.y = y;
+                            combatState.grid[y][x] = unit;
+                            placed = true;
+                        }
+                    }
+                }
+                combatState.enemyUnits.push(unit);
+            }
+            
+            renderGrid();
+            updateUI();
+        }
+        
+        function renderGrid() {
+            const grid = document.getElementById('combat-grid');
+            grid.innerHTML = '';
+            
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'combat-cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    
+                    const data = combatState.grid[y][x];
+                    
+                    if (data) {
+                        if (data.type === 'wall') {
+                            cell.classList.add('wall');
+                        } else if (data.side) {
+                            // CREATE PROPER SVG SPRITES
+                            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                            svg.setAttribute('viewBox', '0 0 24 24');
+                            svg.setAttribute('width', '22');
+                            svg.setAttribute('height', '22');
+                            svg.className = 'combat-unit';
+                            
+                            if (data.side === 'player') {
+                                if (data.armed) {
+                                    // Player with gun - blue soldier with rifle
+                                    svg.innerHTML = `
+                                        <circle cx="12" cy="12" r="10" fill="#0088ff" stroke="#fff" stroke-width="2"/>
+                                        <circle cx="12" cy="8" r="2.5" fill="#fff"/>
+                                        <rect x="10" y="11" width="4" height="6" fill="#fff"/>
+                                        <rect x="6" y="13" width="12" height="2" fill="#333"/>
+                                        <circle cx="18" cy="14" r="1" fill="#333"/>
+                                        <text x="12" y="20" text-anchor="middle" font-size="4" fill="#ffd700">GUN</text>
+                                    `;
+                                } else {
+                                    // Player unarmed - blue with fists
+                                    svg.innerHTML = `
+                                        <circle cx="12" cy="12" r="10" fill="#0088ff" stroke="#fff" stroke-width="2"/>
+                                        <circle cx="12" cy="8" r="2.5" fill="#fff"/>
+                                        <rect x="10" y="11" width="4" height="6" fill="#fff"/>
+                                        <circle cx="7" cy="14" r="1.5" fill="#fff"/>
+                                        <circle cx="17" cy="14" r="1.5" fill="#fff"/>
+                                        <text x="12" y="20" text-anchor="middle" font-size="4" fill="#ffd700">FIST</text>
+                                    `;
+                                }
+                            } else {
+                                if (data.armed) {
+                                    // Enemy with gun - red gang member with weapon and bandana
+                                    svg.innerHTML = `
+                                        <circle cx="12" cy="12" r="10" fill="#ff0000" stroke="#fff" stroke-width="2"/>
+                                        <circle cx="12" cy="8" r="2.5" fill="#fff"/>
+                                        <rect x="10" y="11" width="4" height="6" fill="#fff"/>
+                                        <rect x="6" y="13" width="12" height="2" fill="#333"/>
+                                        <circle cx="18" cy="14" r="1" fill="#333"/>
+                                        <rect x="9" y="5" width="6" height="2" fill="#333"/>
+                                        <text x="12" y="20" text-anchor="middle" font-size="4" fill="#ffd700">GUN</text>
+                                    `;
+                                } else {
+                                    // Enemy unarmed - red gang member with bandana
+                                    svg.innerHTML = `
+                                        <circle cx="12" cy="12" r="10" fill="#ff0000" stroke="#fff" stroke-width="2"/>
+                                        <circle cx="12" cy="8" r="2.5" fill="#fff"/>
+                                        <rect x="10" y="11" width="4" height="6" fill="#fff"/>
+                                        <circle cx="7" cy="14" r="1.5" fill="#fff"/>
+                                        <circle cx="17" cy="14" r="1.5" fill="#fff"/>
+                                        <rect x="9" y="5" width="6" height="2" fill="#333"/>
+                                        <text x="12" y="20" text-anchor="middle" font-size="4" fill="#ffd700">FIST</text>
+                                    `;
+                                }
+                            }
+                            
+                            if (!data.alive) {
+                                svg.classList.add('dead');
+                            }
+                            
+                            svg.onclick = (e) => {
+                                e.stopPropagation();
+                                handleClick(x, y);
+                            };
+                            cell.appendChild(svg);
+                        }
+                    }
+                    
+                    cell.onclick = (e) => {
+                        if (e.target === cell) {
+                            handleClick(x, y);
+                        }
+                    };
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        function handleClick(x, y) {
+            if (combatState.phase !== 'player') return;
+            
+            const clicked = combatState.grid[y][x];
+            
+            if (clicked && clicked.side === 'player' && clicked.alive) {
+                selectUnit(clicked);
+            } else if (combatState.showingMoveRange) {
+                tryMove(x, y);
+            } else if (combatState.showingAttackRange) {
+                tryAttack(x, y);
+            } else {
+                clearSelection();
+            }
+        }
+        
+        function selectUnit(unit) {
+            combatState.selectedUnit = unit;
+            clearHighlights();
+            
+            document.querySelectorAll('.combat-cell').forEach(c => {
+                c.classList.remove('selected');
+                if (parseInt(c.dataset.x) === unit.x && parseInt(c.dataset.y) === unit.y) {
+                    c.classList.add('selected');
+                }
+            });
+            
+            updateUI();
+        }
+        
+        function clearSelection() {
+            combatState.selectedUnit = null;
+            combatState.showingMoveRange = false;
+            combatState.showingAttackRange = false;
+            clearHighlights();
+            document.querySelectorAll('.combat-cell').forEach(c => c.classList.remove('selected'));
+            updateUI();
+        }
+        
+        function clearHighlights() {
+            document.querySelectorAll('.combat-cell').forEach(c => {
+                c.classList.remove('move-range', 'attack-range');
+            });
+        }
+        
+        function showMove() {
+            if (!combatState.selectedUnit || combatState.selectedUnit.hasMoved) return;
+            
+            combatState.showingMoveRange = true;
+            combatState.showingAttackRange = false;
+            clearHighlights();
+            
+            const unit = combatState.selectedUnit;
+            const maxDist = 3;
+            
+            for (let dx = -maxDist; dx <= maxDist; dx++) {
+                for (let dy = -maxDist; dy <= maxDist; dy++) {
+                    if (Math.abs(dx) + Math.abs(dy) <= maxDist && (dx !== 0 || dy !== 0)) {
+                        const nx = unit.x + dx;
+                        const ny = unit.y + dy;
+                        
+                        if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                            const data = combatState.grid[ny][nx];
+                            if (!data) {
+                                const cell = document.querySelector(`[data-x="${nx}"][data-y="${ny}"]`);
+                                if (cell) cell.classList.add('move-range');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        function showAttack() {
+            if (!combatState.selectedUnit || combatState.selectedUnit.hasAttacked) return;
+            
+            combatState.showingAttackRange = true;
+            combatState.showingMoveRange = false;
+            clearHighlights();
+            
+            const targets = getTargets(combatState.selectedUnit);
+            targets.forEach(target => {
+                const cell = document.querySelector(`[data-x="${target.x}"][data-y="${target.y}"]`);
+                if (cell) cell.classList.add('attack-range');
+            });
+        }
+        
+        function getTargets(unit) {
+            const targets = [];
+            
+            if (unit.armed) {
+                const dirs = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+                for (const [dx, dy] of dirs) {
+                    let dist = 1;
+                    while (dist < GRID_SIZE) {
+                        const cx = unit.x + dx * dist;
+                        const cy = unit.y + dy * dist;
+                        if (cx < 0 || cx >= GRID_SIZE || cy < 0 || cy >= GRID_SIZE) break;
+                        
+                        const data = combatState.grid[cy][cx];
+                        if (data) {
+                            if (data.type === 'wall') break;
+                            if (data.side === 'enemy' && data.alive) {
+                                targets.push(data);
+                                break;
+                            }
+                            if (data.side === 'player') break;
+                        }
+                        dist++;
+                    }
+                }
+            } else {
+                const dirs = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+                for (const [dx, dy] of dirs) {
+                    const cx = unit.x + dx;
+                    const cy = unit.y + dy;
+                    if (cx >= 0 && cx < GRID_SIZE && cy >= 0 && cy < GRID_SIZE) {
+                        const data = combatState.grid[cy][cx];
+                        if (data && data.side === 'enemy' && data.alive) {
+                            targets.push(data);
+                        }
+                    }
+                }
+            }
+            
+            return targets;
+        }
+        
+        function tryMove(x, y) {
+            const unit = combatState.selectedUnit;
+            if (!unit || unit.hasMoved) return;
+            
+            const dist = Math.abs(unit.x - x) + Math.abs(unit.y - y);
+            if (dist > 3 || combatState.grid[y][x]) return;
+            
+            combatState.grid[unit.y][unit.x] = null;
+            unit.x = x;
+            unit.y = y;
+            combatState.grid[y][x] = unit;
+            unit.hasMoved = true;
+            
+            playSound('steps');
+            addLog(`${unit.id} moves to (${x},${y})`);
+            
+            clearSelection();
+            renderGrid();
+        }
+        
+        function tryAttack(x, y) {
+            const target = combatState.grid[y][x];
+            if (!target || target.side !== 'enemy' || !target.alive) return;
+            
+            const targets = getTargets(combatState.selectedUnit);
+            if (!targets.includes(target)) return;
+            
+            const attacker = combatState.selectedUnit;
+            attacker.hasAttacked = true;
+            combatState.showingAttackRange = false;
+            clearHighlights();
+            
+            if (attacker.armed) {
+                playSound('shoot');
+            }
+            
+            let hitChance;
+            if (attacker.armed) {
+                const dist = Math.max(Math.abs(attacker.x - target.x), Math.abs(attacker.y - target.y));
+                hitChance = Math.max(0.05, 0.95 - (dist - 1) * 0.1);
+            } else {
+                hitChance = 0.6;
+            }
+            
+            const cell = document.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+            const attackerIdx = combatState.playerUnits.indexOf(attacker) + 1;
+            const targetIdx = combatState.enemyUnits.indexOf(target) + 1;
+            
+            setTimeout(() => {
+                if (Math.random() < hitChance) {
+                    const dmg = attacker.armed ? Math.floor(Math.random() * 40) + 30 : Math.floor(Math.random() * 20) + 15;
+                    target.health -= dmg;
+                    
+                    const marker = document.createElement('div');
+                    marker.className = 'hit-marker';
+                    marker.textContent = `-${dmg}`;
+                    cell.appendChild(marker);
+                    setTimeout(() => marker.remove(), 1000);
+                    
+                    addLog(`Unit ${attackerIdx} hits Enemy ${targetIdx} for ${dmg} damage!`, 'hit');
+                    
+                    if (target.health <= 0) {
+                        target.alive = false;
+                        playSound('death');
+                        addLog(`Enemy ${targetIdx} eliminated!`, 'death');
+                    }
+                } else {
+                    const marker = document.createElement('div');
+                    marker.className = 'miss-marker';
+                    marker.textContent = 'MISS';
+                    cell.appendChild(marker);
+                    setTimeout(() => marker.remove(), 1000);
+                    
+                    addLog(`Unit ${attackerIdx} misses Enemy ${targetIdx}!`, 'miss');
+                }
+                
+                renderGrid();
+                updateUI();
+                checkWinCondition();
+            }, 200);
+        }
+        
+        function enemyTurn() {
+            combatState.phase = 'enemy';
+            combatState.selectedUnit = null;
+            clearHighlights();
+            updateUI();
+            
+            const aliveEnemies = combatState.enemyUnits.filter(u => u.alive);
+            const alivePlayers = combatState.playerUnits.filter(u => u.alive);
+            
+            if (aliveEnemies.length === 0 || alivePlayers.length === 0) return;
+            
+            let actionIndex = 0;
+            
+            function processNextEnemy() {
+                if (actionIndex >= aliveEnemies.length) {
+                    combatState.phase = 'player';
+                    combatState.turnNumber++;
+                    combatState.playerUnits.forEach(u => { u.hasMoved = false; u.hasAttacked = false; });
+                    addLog(`--- Turn ${combatState.turnNumber} ---`);
+                    updateUI();
+                    return;
+                }
+                
+                const enemy = aliveEnemies[actionIndex];
+                let closestPlayer = null;
+                let closestDist = Infinity;
+                
+                for (const player of alivePlayers) {
+                    const dist = Math.abs(enemy.x - player.x) + Math.abs(enemy.y - player.y);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestPlayer = player;
+                    }
+                }
+                
+                if (!closestPlayer) {
+                    actionIndex++;
+                    setTimeout(processNextEnemy, 500);
+                    return;
+                }
+                
+                const targets = getTargets(enemy);
+                const canAttack = targets.includes(closestPlayer);
+                
+                if (canAttack) {
+                    if (enemy.armed) playSound('shoot');
+                    
+                    const hitChance = enemy.armed ? 0.7 : 0.5;
+                    const enemyIdx = combatState.enemyUnits.indexOf(enemy) + 1;
+                    const playerIdx = combatState.playerUnits.indexOf(closestPlayer) + 1;
+                    
+                    if (Math.random() < hitChance) {
+                        const dmg = enemy.armed ? Math.floor(Math.random() * 30) + 20 : Math.floor(Math.random() * 15) + 10;
+                        closestPlayer.health -= dmg;
+                        
+                        addLog(`Enemy ${enemyIdx} hits Unit ${playerIdx} for ${dmg} damage!`, 'hit');
+                        
+                        if (closestPlayer.health <= 0) {
+                            closestPlayer.alive = false;
+                            playSound('death');
+                            addLog(`Unit ${playerIdx} eliminated!`, 'death');
+                        }
+                    } else {
+                        addLog(`Enemy ${enemyIdx} misses Unit ${playerIdx}!`, 'miss');
+                    }
+                } else {
+                    const moveOptions = [];
+                    for (let dx = -3; dx <= 3; dx++) {
+                        for (let dy = -3; dy <= 3; dy++) {
+                            if (Math.abs(dx) + Math.abs(dy) <= 3 && (dx !== 0 || dy !== 0)) {
+                                const nx = enemy.x + dx;
+                                const ny = enemy.y + dy;
+                                
+                                if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                                    const data = combatState.grid[ny][nx];
+                                    if (!data) {
+                                        const newDist = Math.abs(nx - closestPlayer.x) + Math.abs(ny - closestPlayer.y);
+                                        moveOptions.push({x: nx, y: ny, dist: newDist});
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (moveOptions.length > 0) {
+                        moveOptions.sort((a, b) => a.dist - b.dist);
+                        const move = moveOptions[0];
+                        
+                        combatState.grid[enemy.y][enemy.x] = null;
+                        enemy.x = move.x;
+                        enemy.y = move.y;
+                        combatState.grid[move.y][move.x] = enemy;
+                        
+                        playSound('steps');
+                        addLog(`Enemy ${combatState.enemyUnits.indexOf(enemy) + 1} moves`);
+                    }
+                }
+                
+                renderGrid();
+                updateUI();
+                checkWinCondition();
+                
+                actionIndex++;
+                setTimeout(processNextEnemy, 800);
+            }
+            
+            setTimeout(processNextEnemy, 500);
+        }
+        
+        function checkWinCondition() {
+            const alivePlayers = combatState.playerUnits.filter(u => u.alive);
+            const aliveEnemies = combatState.enemyUnits.filter(u => u.alive);
+            
+            if (alivePlayers.length === 0) {
+                addLog('=== DEFEAT ===', 'defeat');
+                addLog('All your forces eliminated!', 'defeat');
+                stopTakeoverMusic(); // Stop music on defeat
+                setTimeout(() => {
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'combatResult',
+                            result: 'defeat',
+                            survivingUnits: 0
+                        }, '*');
+                        window.close();
+                    }
+                }, 2000);
+            } else if (aliveEnemies.length === 0) {
+                addLog('=== VICTORY ===', 'victory');
+                addLog('Enemy forces eliminated!', 'victory');
+                stopTakeoverMusic(); // Stop music on victory
+                setTimeout(() => {
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'combatResult',
+                            result: 'victory',
+                            survivingUnits: alivePlayers.length
+                        }, '*');
+                        window.close();
+                    }
+                }, 2000);
+            }
+        }
+        
+        function endTurn() {
+            if (combatState.phase !== 'player') return;
+            
+            clearSelection();
+            addLog(`--- Enemy Turn ---`);
+            enemyTurn();
+        }
+        
+        function updateUI() {
+            document.getElementById('combat-turn').textContent = `Turn: ${combatState.turnNumber}`;
+            document.getElementById('combat-phase').textContent = 
+                combatState.phase === 'player' ? 'Your Turn' : 'Enemy Turn';
+            
+            const pList = document.getElementById('player-units-list');
+            pList.innerHTML = '';
+            combatState.playerUnits.forEach((u, i) => {
+                const s = document.createElement('div');
+                s.className = `unit-status ${u.alive ? 'alive' : 'dead'}`;
+                const icon = u.armed ? '🔫' : '👊';
+                s.textContent = `Unit ${i + 1}: ${icon} HP ${u.health}/${u.maxHealth}`;
+                if (u.hasMoved || u.hasAttacked) s.textContent += ' ✓';
+                pList.appendChild(s);
+            });
+            
+            const eList = document.getElementById('enemy-units-list');
+            eList.innerHTML = '';
+            combatState.enemyUnits.forEach((u, i) => {
+                const s = document.createElement('div');
+                s.className = `unit-status ${u.alive ? 'alive' : 'dead'}`;
+                const icon = u.armed ? '🔫' : '👊';
+                s.textContent = `Enemy ${i + 1}: ${icon} HP ${u.health}/${u.maxHealth}`;
+                eList.appendChild(s);
+            });
+            
+            const moveBtn = document.getElementById('combat-move-btn');
+            const attackBtn = document.getElementById('combat-attack-btn');
+            const endBtn = document.getElementById('combat-end-turn-btn');
+            
+            if (combatState.phase === 'player') {
+                moveBtn.disabled = !combatState.selectedUnit || combatState.selectedUnit.hasMoved;
+                attackBtn.disabled = !combatState.selectedUnit || combatState.selectedUnit.hasAttacked;
+                endBtn.disabled = false;
+            } else {
+                moveBtn.disabled = true;
+                attackBtn.disabled = true;
+                endBtn.disabled = true;
+            }
+        }
+        
+        document.getElementById('combat-move-btn').onclick = showMove;
+        document.getElementById('combat-attack-btn').onclick = showAttack;
+        document.getElementById('combat-end-turn-btn').onclick = endTurn;
+        
+        // Stop music on window close
+        window.addEventListener('beforeunload', () => {
+            stopTakeoverMusic();
+        });
+    </script>
+</body>
+</html>
