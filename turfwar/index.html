@@ -14,8 +14,8 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       window.__deferredInstallPrompt = e;
-      if (window.__onInstallPromptCaptured) window.__onInstallPromptCaptured();
     });
+  </script>
   </script>
   <meta name="theme-color" content="#0a0c0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -2641,18 +2641,9 @@ button:active, .popup-btn:active, .popup-close-btn:active {
 #stud-stats-modal.active { display: flex; }
 
     </style>
-#pwa-install-btn {
-    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-    z-index: 999; display: none;
-    padding: 10px 18px; border-radius: 24px;
-    background: #00ff00; color: #0a0c0a; font-weight: bold; font-size: 13px;
-    border: none; box-shadow: 0 0 16px rgba(0,255,0,0.5);
-    font-family: inherit; letter-spacing: 0.5px;
-}
-#pwa-install-btn.show { display: block; }
+#pwa-install-btn { display: none; }
 </head>
 <body>
-<button id="pwa-install-btn" onclick="handlePwaInstallClick()">📲 INSTALL APP</button>
 <!-- TITLE SCREEN - shown on first load, covers everything until New Game
      or Load is picked. Tutorial/Manual open on top without dismissing it. -->
 <div id="title-screen">
@@ -2689,6 +2680,7 @@ button:active, .popup-btn:active, .popup-close-btn:active {
                 <button class="title-menu-btn" onclick="openManual()">MANUAL</button>
                 <button class="title-menu-btn title-menu-btn-primary" onclick="startNewGameFromTitle()">NEW GAME</button>
                 <button class="title-menu-btn" onclick="loadFromTitle()">LOAD</button>
+                <button class="title-menu-btn" onclick="handleTitleInstallClick()">INSTALL APP</button>
             </div>
         </div>
     </div>
@@ -48508,37 +48500,30 @@ function resetJazzBarDescription() {
     });
   }
 
-  // ===== PWA install button =====
+  // ===== PWA install (title screen button) =====
   // The actual beforeinstallprompt listener lives in <head> (see above) so
-  // it can't miss an early-firing event. This just wires up the button UI
-  // to whatever got captured, whenever it got captured - before or after
-  // this script runs.
-  const installBtn = document.getElementById('pwa-install-btn');
-
+  // it can't miss an early-firing event.
   function isAlreadyInstalled() {
     return window.matchMedia('(display-mode: standalone)').matches
       || window.navigator.standalone === true; // iOS home-screen check
   }
 
-  function showInstallBtnIfEligible() {
-    if (window.__deferredInstallPrompt && !isAlreadyInstalled()) {
-      installBtn.classList.add('show');
+  function handleTitleInstallClick() {
+    if (isAlreadyInstalled()) {
+      alert('Already running as an installed app.');
+      return;
     }
-  }
-  window.__onInstallPromptCaptured = showInstallBtnIfEligible;
-  showInstallBtnIfEligible(); // in case it already fired before this ran
-
-  function handlePwaInstallClick() {
-    if (!window.__deferredInstallPrompt) return;
-    installBtn.classList.remove('show');
-    window.__deferredInstallPrompt.prompt();
-    window.__deferredInstallPrompt.userChoice.finally(() => {
-      window.__deferredInstallPrompt = null;
-    });
+    if (window.__deferredInstallPrompt) {
+      window.__deferredInstallPrompt.prompt();
+      window.__deferredInstallPrompt.userChoice.finally(() => {
+        window.__deferredInstallPrompt = null;
+      });
+    } else {
+      alert('To install:\n\nTap the ⋮ menu (top right of Chrome)\nthen tap "Install and create shortcut"');
+    }
   }
 
   window.addEventListener('appinstalled', () => {
-    installBtn.classList.remove('show');
     window.__deferredInstallPrompt = null;
   });
 </script>

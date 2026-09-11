@@ -1,5 +1,5 @@
 // Bump CACHE_VERSION whenever index.html or any asset changes so clients pick up the update.
-const CACHE_VERSION = 'turfwar-v6-95-135-assets4';
+const CACHE_VERSION = 'turfwar-v6-95-135-assets5';
 
 // Core shell — must all be present or the app can't boot offline.
 const SHELL_ASSETS = [
