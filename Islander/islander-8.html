@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ISLANDER// Survival Terminal</title>
+<style>
+  :root{
+    --bg:#070c07; --green:#5dff8f; --green-dim:#4ad17a; --amber:#ffc233;
+    --red:#ff6666; --blue:#7ee0ff; --purple:#d6a6ff; --fire:#ffa25c; --border:#2a6b42; --panel:#0d1a0d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; background:var(--bg); color:var(--green);
+    font-family:'Courier New', Courier, monospace;
+  }
+  body{ min-height:100dvh; min-height:calc(var(--vh, 1vh) * 100); display:flex; align-items:center; justify-content:center; padding:6px; }
+  #frame{
+    width:100%; max-width:480px;
+    display:flex; flex-direction:column;
+    border:2px solid var(--border); border-radius:8px;
+    background:radial-gradient(ellipse at top, #0d160d, #030603 80%);
+    box-shadow:0 0 20px rgba(57,255,106,0.15), inset 0 0 50px rgba(0,0,0,0.6);
+    overflow:hidden; position:relative; transition:filter .6s ease;
+  }
+  #titlebar{
+    flex:0 0 auto; background:linear-gradient(180deg,#123018,#0a1c0d);
+    padding:5px 8px; display:flex; justify-content:space-between; align-items:center;
+    border-bottom:1px solid var(--border); font-size:10px; letter-spacing:1px; color:var(--green-dim);
+  }
+  #statusbar{ flex:0 0 auto; display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:var(--border); font-size:9.5px;}
+  .stat{ background:var(--panel); padding:4px 2px; text-align:center; min-width:0;}
+  .stat .label{color:var(--green-dim); font-size:7.5px;}
+  .stat .val{font-size:11.5px; font-weight:bold;}
+  .barwrap{height:4px; background:#04240c; margin-top:3px; border-radius:2px; overflow:hidden;}
+  .barfill{height:100%; background:var(--green); transition:width .2s;}
+  #advisor{
+    flex:0 0 auto; background:#0a1a0c; border-bottom:1px solid var(--border);
+    padding:5px 8px; font-size:10px; color:var(--amber); letter-spacing:0.2px;
+  }
+  #infoRow{ flex:0 0 auto; display:flex; gap:1px; background:var(--border); border-bottom:1px solid var(--border); }
+  #infoRow button{
+    flex:1 1 0; background:#0a1a0c; border:none; border-radius:0; color:var(--amber);
+    font-family:inherit; font-size:9.5px; padding:6px 3px; min-height:30px; cursor:pointer; letter-spacing:0.3px;
+  }
+  #infoRow button:active{ background:#123018; }
+  #log{
+    flex:0 0 auto; height:38vh; min-height:200px; max-height:360px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:8px; font-size:11px; line-height:1.42;
+    text-shadow:0 0 4px rgba(93,255,143,0.45);
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 3px);
+  }
+  #log p{margin:2px 0;}
+  .sys{color:var(--green-dim);} .warn{color:var(--amber);} .danger{color:var(--red);}
+  .info{color:var(--blue);} .good{color:var(--green);} .lore{color:var(--purple); font-style:italic;} .fire{color:var(--fire);}
+  .journalEntry{margin:3px 0; color:var(--purple); font-style:italic; font-size:10.5px;}
+  .invGrid{display:grid; grid-template-columns:1fr 1fr; gap:1px 10px;}
+  .invRow{display:flex; justify-content:space-between; color:#a8f5b8; padding:1px 0; font-size:10.5px;}
+  .invRow span:last-child{color:var(--green);}
+  #actionbar{ flex:0 0 auto; border-top:1px solid var(--border); background:#060c06; padding:6px; }
+  .menuBtnRow{ display:flex; gap:5px; flex-wrap:wrap; }
+  button{
+    font-family:inherit; background:#0c1f0f; color:var(--green); border:1px solid var(--green-dim);
+    padding:7px 5px; font-size:10px; cursor:pointer; border-radius:4px; letter-spacing:0.2px;
+    flex:1 1 30%; min-width:0; min-height:36px; touch-action:manipulation;
+  }
+  button:disabled{opacity:0.32; cursor:not-allowed;}
+  button:active:not(:disabled){transform:scale(0.97);}
+  button.wide{flex:1 1 100%;}
+  button.encounter-hunt{border-color:var(--red); color:var(--red);}
+  button.encounter-leave{border-color:var(--green-dim);}
+  #restartWrap{display:none; padding-top:6px;}
+  @media (max-width:340px){ button{font-size:9px; padding:6px 3px;} }
+
+  /* ===================== MODAL SYSTEM (fully separate from #frame's layout) ===================== */
+  #modalBackdrop{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:50;
+  }
+  #modalBackdrop.open{ display:block; }
+  .modal{
+    display:none; position:fixed; left:50%; bottom:0; transform:translateX(-50%);
+    width:100%; max-width:480px; max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    background:#081208; border:1px solid var(--border); border-bottom:none; border-radius:14px 14px 0 0;
+    z-index:51; padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -6px 30px rgba(0,0,0,0.7);
+  }
+  .modal.open{ display:block; }
+  .modalHeader{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    margin-bottom:8px; border-bottom:1px dashed var(--border); padding-bottom:8px;
+  }
+  .modalHeader h3{ margin:0; font-size:12px; color:var(--amber); letter-spacing:1.5px; }
+  .modalClose{
+    background:none; border:1px solid var(--green-dim); border-radius:4px; padding:4px 12px;
+    font-size:14px; flex:0 0 auto; min-height:30px; min-width:40px;
+  }
+  .encounterFlavor{
+    font-size:11px; color:var(--blue); font-style:italic; margin-bottom:10px;
+    padding-bottom:8px; border-bottom:1px dashed var(--border);
+  }
+  .encounterFlavor.lore{ color:var(--purple); }
+  .menuItem{
+    display:flex; flex-direction:column; gap:2px; width:100%;
+    background:#0c1f0f; border:1px solid var(--green-dim); border-radius:4px;
+    padding:8px 9px; margin-bottom:6px; font-size:10.5px; color:var(--green);
+    cursor:pointer; text-align:left;
+  }
+  .menuItem:disabled{opacity:0.35; cursor:not-allowed;}
+  .menuItem .miTitle{font-weight:bold;}
+  .menuItem .miSub{font-size:9px; color:var(--green-dim);}
+  .menuItem .miNeed{font-size:9px; color:var(--amber);}
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="titlebar">
+    <div>ISLANDER//SURVIVAL</div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span id="fireBadge" style="color:var(--green-dim); font-family:'Courier New',monospace;">( ) OUT</span>
+      <div id="daytime">DAY 1 — MORNING</div>
+    </div>
+  </div>
+  <div id="statusbar">
+    <div class="stat"><div class="label">HP</div><div class="val" id="hpVal">100</div><div class="barwrap"><div class="barfill" id="hpBar"></div></div></div>
+    <div class="stat"><div class="label">HUNGER</div><div class="val" id="hungerVal">100</div><div class="barwrap"><div class="barfill" id="hungerBar" style="background:#ffb000"></div></div></div>
+    <div class="stat"><div class="label">THIRST</div><div class="val" id="thirstVal">100</div><div class="barwrap"><div class="barfill" id="thirstBar" style="background:#5ad1ff"></div></div></div>
+    <div class="stat"><div class="label">ENERGY</div><div class="val" id="energyVal">100</div><div class="barwrap"><div class="barfill" id="energyBar" style="background:#c084fc"></div></div></div>
+    <div class="stat"><div class="label">WARMTH</div><div class="val" id="warmthVal">100</div><div class="barwrap"><div class="barfill" id="warmthBar" style="background:#ff8a3d"></div></div></div>
+    <div class="stat"><div class="label">SANITY</div><div class="val" id="sanityVal">100</div><div class="barwrap"><div class="barfill" id="sanityBar" style="background:#c084fc"></div></div></div>
+  </div>
+  <div id="advisor">— booting —</div>
+  <div id="infoRow">
+    <button id="btnGuide">Guide</button>
+    <button id="btnInventory">Inventory</button>
+    <button id="btnJournal">Journal (<span id="journalCount">0</span>)</button>
+  </div>
+  <div id="log"></div>
+  <div id="actionbar">
+    <div class="menuBtnRow" id="menuRow">
+      <button data-menu="explore">Explore ▾</button>
+      <button data-menu="gather">Gather ▾</button>
+      <button id="btnHunt">Hunt</button>
+      <button data-menu="use">Use / Craft ▾</button>
+      <button data-menu="consume">Consume ▾</button>
+      <button id="btnRest">Rest</button>
+    </div>
+    <div id="restartWrap"><button class="wide" id="btnRestart">Restart</button></div>
+  </div>
+</div>
+
+<div id="modalBackdrop"></div>
+
+<div class="modal" id="guideModal">
+  <div class="modalHeader"><h3>SURVIVAL GUIDE</h3><button class="modalClose" data-close="guideModal">✕</button></div>
+  <div id="guideList"></div>
+</div>
+
+<div class="modal" id="inventoryModal">
+  <div class="modalHeader"><h3>INVENTORY &amp; GEAR</h3><button class="modalClose" data-close="inventoryModal">✕</button></div>
+  <div id="invList"></div>
+</div>
+
+<div class="modal" id="journalModal">
+  <div class="modalHeader"><h3>JOURNAL</h3><button class="modalClose" data-close="journalModal">✕</button></div>
+  <div id="journalList"></div>
+</div>
+
+<div class="modal" id="actionModal">
+  <div class="modalHeader"><h3 id="actionModalTitle">MENU</h3><button class="modalClose" id="actionModalCloseBtn" data-close="actionModal">✕</button></div>
+  <div id="actionModalBody"></div>
+</div>
+
+<div class="modal" id="revealModal">
+  <div class="modalHeader"><h3 style="color:var(--red);">— SIGNAL —</h3></div>
+  <div id="revealText" style="font-size:12px; line-height:1.5; color:var(--red); text-shadow:0 0 4px rgba(255,68,68,0.5); margin-bottom:14px; white-space:pre-line;"></div>
+  <button class="menuItem" id="revealContinueBtn" style="text-align:center; border-color:var(--red); color:var(--red);"><span class="miTitle">( click to continue )</span></button>
+</div>
+
+<script>
+// ============================ CONSTANTS ============================
+const TIMES = ["MORNING","AFTERNOON","EVENING","NIGHT"];
+const CREW_THRESHOLD = 5;
+
+const RESOURCE_LABELS = {
+  sticks:"Sticks", twigs:"Twigs", leaves:"Leaves", logs:"Logs",
+  hardStone:"Hard Stone", flatStone:"Flat Stone", roundStone:"Round Stone", dirt:"Dirt", salt:"Salt",
+  sharpStone:"Sharp Stone", hotStone:"Hot Stone",
+  vine:"Vine", driedVine:"Dried Vine/Cord",
+  rawWater:"Raw Water", safeWater:"Purified Water",
+  wildFoodSafe:"Foraged Food (Safe)", wildFoodUncertain:"Foraged Food (Uncertain)", wildFoodRisky:"Foraged Food (Risky)",
+  meat:"Raw Meat", cookedMeat:"Cooked Meat",
+  sinew:"Sinew", skin:"Skin", boneLong:"Long Bone", boneShort:"Short Bone",
+  herbs:"Herbs", fabric:"Fabric Scraps", firstAidKit:"First-Aid Kit", ammo:"Ammo"
+};
+
+const FOOD_FLAVORS = ['mushrooms','insects','nuts','wild leaves','snails'];
+
+const PREY = {
+  small:  ['lizard','frog','squirrel','bird','crab','rabbit'],
+  medium: ['fox','iguana','monkey','turtle'],
+  large:  ['deer','boar'],
+  apex:   ['wolf','bear']
+};
+const TIER_STATS = {
+  small:  { success:0.75, threatChance:0.08, dodge:0.65, threats:['snake'] },
+  medium: { success:0.45, threatChance:0.18, dodge:0.50, threats:['wolf'] },
+  large:  { success:0.30, threatChance:0.26, dodge:0.40, threats:['wolf'] },
+  apex:   { success:0.15, threatChance:0.40, dodge:0.30, threats:['wolf','bear'] },
+};
+const DRESS_YIELD = {
+  medium: { meat:[3,5], sinew:[1,1], skin:[1,1], boneShortChance:0.5 },
+  large:  { meat:[5,8], sinew:[1,2], skin:[1,2], boneLong:[1,1], boneShortChance:0.4 },
+  apex:   { meat:[8,14], sinew:[2,3], skin:[2,2], boneLong:[1,2], boneShortChance:0.6 },
+};
+const WEAPONS = [
+  { key:'rocks', label:'Throw Rocks', require:s=>true, successMod:-0.20, dodgeMod:-0.10 },
+  { key:'roundStone', label:'Round Stone', require:s=>s.inv.roundStone>=1, successMod:-0.05, dodgeMod:-0.05 },
+  { key:'stick', label:'Plain Stick', require:s=>s.inv.sticks>=1, successMod:-0.10, dodgeMod:-0.05 },
+  { key:'sharpRock', label:'Sharp Rock', require:s=>s.inv.sharpStone>=1, successMod:0.05, dodgeMod:-0.05 },
+  { key:'sharpStick', label:'Sharp Stick', require:s=>s.owned.sharpStick, successMod:0.05, dodgeMod:0.00 },
+  { key:'boneWeapon', label:'Bone Weapon', require:s=>s.owned.boneWeapon, successMod:0.08, dodgeMod:0.02 },
+  { key:'knife', label:'Knife', require:s=>s.owned.knife, successMod:0.10, dodgeMod:0.05 },
+  { key:'axe', label:'Axe', require:s=>s.owned.axe, successMod:0.15, dodgeMod:-0.05 },
+  { key:'stoneSpear', label:'Stone Spear', require:s=>s.owned.stoneSpear, successMod:0.20, dodgeMod:0.15 },
+  { key:'pistol', label:'Pistol', require:s=>s.owned.pistol && s.inv.ammo>0, successMod:0.32, dodgeMod:0.20 },
+];
+const REVEAL_FLAVOR = {
+  small:  ["a camera operator, crouched low, filming you"],
+  medium: ["a production assistant pretending to be foliage"],
+  large:  ["a production truck barely hidden behind the ridge — someone inside is eating a sandwich"],
+  apex:   ["the director himself, clipboard in hand, not even trying to hide"]
+};
+const SECURITY_FLAVOR = {
+  small:  ["a security guard, badge catching the light, trying to look unbothered"],
+  medium: ["two security guards, radios crackling, pretending this is routine"],
+  large:  ["a security team in tactical gear, clearly told to look intimidating"],
+  apex:   ["the head of security himself, hand resting on his holster, not drawing it"]
+};
+const WARNING_SEQUENCE = [
+  "A hidden speaker blares to life:\n\n\"THIS IS A TELEVISION SHOW AND YOU ARE THE SOLE CONTESTANT. YOU ARE IN NO REAL DANGER. PLEASE LOWER YOUR WEAPON. WE ARE APPROACHING.\"",
+  "The speaker crackles again:\n\n\"THAT WAS PRODUCTION STAFF. THIS IS NOT PART OF THE FORMAT. WE ARE ASKING YOU, FORMALLY, TO STAND DOWN.\"",
+  "The speaker, sharper this time:\n\n\"YOU HAVE NOW BEEN WARNED TWICE. CONTINUED NONCOMPLIANCE WILL RESULT IN THE DEPLOYMENT OF OUR LOCAL SECURITY TEAM. THIS IS YOUR FINAL NOTICE REGARDING PRODUCTION STAFF.\"",
+  "The speaker, flatter now:\n\n\"SECURITY HAS BEEN DEPLOYED. THIS ENGAGEMENT WAS NOT SUPPOSED TO HAPPEN. STAND DOWN, OR FURTHER FORCE WILL BE AUTHORIZED.\"",
+  "The speaker again, no longer calm:\n\n\"YOU HAVE NOW KILLED MULTIPLE MEMBERS OF THIS PRODUCTION. THIS IS WELL BEYOND PROTOCOL. WE ARE REASSESSING THE SITUATION.\"",
+];
+const SECURITY_ACTIVATES_AFTER_WARNING = 3; // security takes over as the reskin flavor once this many warnings have been delivered
+const FAREWELL_MESSAGE = "The speaker, flat and final:\n\n\"THIS PRODUCTION IS SUSPENDED, EFFECTIVE IMMEDIATELY. ALL PERSONNEL ARE BEING WITHDRAWN. YOU WILL BE LEFT TO SURVIVE THE ISLAND ON YOUR OWN TERMS FROM HERE ON. GOOD LUCK.\"";
+const CANNIBALISM_LINES = [
+  "The speaker crackles, quieter than before: \"THAT WAS HUMAN REMAINS. WE'D LIKE TO REMIND YOU THIS IS BEING RECORDED.\"",
+  "The speaker, after a pause: \"...continuing to log this for the edit.\"",
+  "The speaker, almost clinical: \"NOTED. CONTINUE.\"",
+];
+
+const CRAFTS = [
+  {id:'axe', label:'Axe', cost:{hardStone:1, sticks:1}, unlocks:'Better logging, a real melee weapon', time:10},
+  {id:'pickaxe', label:'Pickaxe', cost:{hardStone:2, sticks:1}, unlocks:'Faster, safer stone work', time:10},
+  {id:'knife', label:'Knife', cost:{sharpStone:1, hardStone:1}, unlocks:'Ground edge — hunting, dressing, sparks', time:8},
+  {id:'sharpStick', label:'Sharp Stick', cost:{sharpStone:1, sticks:1}, unlocks:'A real (if crude) hunting weapon', time:6},
+  {id:'boneWeapon', label:'Bone Weapon', cost:{boneLong:1, driedVine:1}, unlocks:'A sturdy mid-tier hunting weapon', time:8},
+  {id:'stoneSpear', label:'Stone Spear', cost:{sharpStone:1, sticks:1, driedVine:1}, unlocks:'Best reach and safety in a hunt', time:10},
+  {id:'purifier', label:'Water Purifier', cost:{hardStone:3, sharpStone:1}, unlocks:'Bigger Boil Water yield', time:15},
+  {id:'clothing', label:'Hide Clothing', cost:{skin:3, driedVine:1}, unlocks:'Warmer, always — helps with cold and sanity', time:14},
+  {id:'fishHook', label:'Bone Fish Hook', cost:{boneShort:1, driedVine:1}, unlocks:'Unlocks Fishing (Gather)', time:8},
+  {id:'raft', label:'Raft', cost:{logs:8, sticks:6, driedVine:5}, unlocks:'The only way out to the Wreckage — the water past the shore is shark water', time:20},
+];
+
+const WRECKAGE_ITEMS = [
+  { id:'mug', label:'a coffee mug, chipped but whole', give:function(){ state.owned.container=true; return "Something to carry water in, finally."; } },
+  { id:'bottle', label:'an empty plastic water bottle', give:function(){ state.owned.container=true; return "Something to carry water in, finally."; } },
+  { id:'rope', label:'a coil of rope', give:function(){ const amt=randInt(2,4); state.inv.driedVine += amt; return `+${amt} Dried Vine/Cord — ready-made, no drying needed.`; } },
+  { id:'pocketknife', label:'a pocketknife, still sharp', give:function(){ state.owned.knife=true; return "A real knife — no crafting needed."; } },
+  { id:'tarp', label:'a folded tarp', give:function(){ state.owned.tarpItem=true; return "Ready to weatherproof a shelter frame (Use ▾ → Shelter)."; } },
+  { id:'fabric', label:'scraps of torn fabric', give:function(){ const amt=randInt(2,4); state.inv.fabric += amt; return `+${amt} Fabric Scraps — bedding material.`; } },
+  { id:'ductTape', label:'a roll of duct tape', give:function(){ const amt=randInt(1,3); state.inv.driedVine += amt; return `+${amt} Dried Vine/Cord — sturdy enough as-is.`; } },
+  { id:'lighter', label:'a lighter, half full', give:function(){ state.inv.lighterCharges += 5; return "+5 lighter charges — a fast, reliable way to start a fire."; }, journal:"A lighter, in working condition, in the wreckage of a plane that supposedly just went down." },
+  { id:'firstAidKit', label:'a first-aid kit, seal unbroken', give:function(){ state.inv.firstAidKit += 1; return "+1 First-Aid Kit."; }, journal:"A first-aid kit, contents dated for a flight that only just crashed. The dates don't sit right." },
+  { id:'phone', label:'a cracked phone, screen still faintly lit', give:function(){ state.inv.phoneBattery += 5; return "+5 phone battery charges."; }, journal:"A phone, screen shattered, battery indicator ticking down far slower than it should." },
+  { id:'lifeVest', label:'a life vest, tag half torn', give:function(){ state.owned.lifeVest=true; return "Might take the worst edge off the cold."; }, journal:"A life vest with a manufacture date that doesn't line up with this airline's history." },
+];
+
+const DISCOVERY_TIERS = [
+  [
+    "A plastic bottle in the tideline. The label's perfect — no scratches, no barnacles.",
+    "The wreckage keeps sinking at the same slow angle for hours. It should have gone down by now.",
+    "A patch of trees grows in an unnaturally straight line, like a windbreak someone planted.",
+    "Footprints in the sand that aren't yours. Gone by the time you look again.",
+    "Whatever you need most tends to turn up just in time. Never abundant. Never really absent."
+  ],
+  [
+    "A shard of curved glass, ground smooth. Could be a camera lens, if you squint.",
+    "A rectangular gap behind a fern, edges too clean to be natural rock.",
+    "A wrapper with a logo you don't recognize. It hasn't faded at all.",
+    "A faint electrical hum at night. Gone by the time you're fully awake.",
+    "A scrap of laminated paper, mostly pulped. One line still legible: '...not liable for injury sustained during...'"
+  ],
+  [
+    "A worn foot-trail with tire ruts, nowhere near anywhere you've been.",
+    "A weathered sign. One word still legible: STAFF.",
+    "A shape overhead at dusk. Gone the second you look up.",
+    "The wind carries something that sounds almost like applause. Then it's just waves again.",
+    "A rock that sounds hollow when you strike it."
+  ],
+  [
+    "A camera housing built into a 'boulder,' lens cracked open, still blinking.",
+    "Torn canvas behind a hillside — the treeline behind it is painted.",
+    "A dead radio crackles once: '...vitals stable, continue as planned.'",
+    "A personal effect from someone else. A journal page: 'day 40, I know they're watching.'"
+  ]
+];
+
+// ============================ STATE ============================
+function freshState(){
+  return {
+    day:1, timeIdx:0,
+    hp:100, maxHp:100, hunger:100, thirst:100, energy:100, warmth:100, sanity:100, sick:0,
+    inv:{ sticks:0, twigs:0, leaves:0, logs:0, hardStone:0, flatStone:0, roundStone:0, dirt:0, salt:0,
+          sharpStone:0, hotStone:0, vine:0, driedVine:0,
+          rawWater:0, safeWater:0, wildFoodSafe:0, wildFoodUncertain:0, wildFoodRisky:0,
+          meat:0, cookedMeat:0, sinew:0, skin:0, boneLong:0, boneShort:0,
+          herbs:0, fabric:0, firstAidKit:0, phoneBattery:0, lighterCharges:0, ammo:0 },
+    owned:{ container:false, axe:false, pickaxe:false, knife:false, sharpStick:false, stoneSpear:false,
+            purifier:false, tarpItem:false, lifeVest:false, clothing:false, fishHook:false, boneWeapon:false, pistol:false, raft:false },
+    fire:{ state:'out', meter:0, embersLeft:0 },
+    shelter:{ frameScore:0, beddingScore:0, tarp:false, hotStonesActive:0, dirtBed:false },
+    carcass:{ medium:0, large:0, apex:0 },
+    humanCarcassPending:{ medium:0, large:0, apex:0 },
+    taintedRaw:0, taintedCooked:0,
+    saltedMeat:0,
+    huntWins:0,
+    locations:{ wreckage:true, pond:false, stream:false, river:false, mushroomPatch:false, field:false, treeGrove:false, supplyShack:false },
+    pendingReveal:null,
+    personKillCount:0,
+    hostRevealSeen:false,
+    traps:[],
+    totalTicks:0,
+    warningsGiven:0,
+    securityActive:false,
+    showEnded:false,
+    journal:[],
+    openMenu:null,
+    useCategory:null,
+    pendingEncounter:null,
+    gameOver:false
+  };
+}
+let state = freshState();
+
+const logEl = document.getElementById('log');
+const LOG_MAX_LINES = 200;
+function logMsg(msg, cls){
+  const p = document.createElement('p');
+  if(cls) p.className = cls;
+  p.textContent = msg;
+  logEl.appendChild(p);
+  while(logEl.children.length > LOG_MAX_LINES){
+    logEl.removeChild(logEl.firstChild);
+  }
+  requestAnimationFrame(()=>{ logEl.scrollTop = logEl.scrollHeight; });
+  return p;
+}
+function logDivider(){
+  logMsg('· · · · · · · · · · · · · · ·', 'sys');
+}
+function logAnimated(frames, cls, interval, holdCycles){
+  const p = document.createElement('p');
+  if(cls) p.className = cls;
+  p.style.fontFamily = "'Courier New', monospace";
+  p.style.whiteSpace = 'pre';
+  p.textContent = frames[0];
+  logEl.appendChild(p);
+  while(logEl.children.length > LOG_MAX_LINES){
+    logEl.removeChild(logEl.firstChild);
+  }
+  let tick = 0;
+  const totalTicks = frames.length * holdCycles;
+  const timer = setInterval(()=>{
+    tick++;
+    if(tick >= totalTicks){
+      p.textContent = frames[frames.length-1];
+      clearInterval(timer);
+      return;
+    }
+    p.textContent = frames[tick % frames.length];
+    logEl.scrollTop = logEl.scrollHeight;
+  }, interval);
+  requestAnimationFrame(()=>{ logEl.scrollTop = logEl.scrollHeight; });
+}
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randInt(min,max){ return min + Math.floor(Math.random()*(max-min+1)); }
+function roll(chance){ return Math.random() < chance; }
+
+// ============================ THREATS ============================
+function bestDefenseWeapon(){
+  const avail = WEAPONS.filter(w => w.key!=='rocks' && w.require(state));
+  if(avail.length===0) return null;
+  avail.sort((a,b)=>(b.successMod+b.dodgeMod)-(a.successMod+a.dodgeMod));
+  return avail[0];
+}
+function weaponDodgeBonus(){
+  const w = bestDefenseWeapon();
+  return w ? Math.max(0, w.dodgeMod) : 0;
+}
+const THREATS = {
+  wolf:  { name:"Wolf",   base:0.55, dmg:[9,18] },
+  bear:  { name:"Bear",   base:0.40, dmg:[18,32] },
+  snake: { name:"Snake",  base:0.65, dmg:[8,15] },
+  branch:{ name:"Falling Branch", base:0.70, dmg:[5,15] },
+  slide: { name:"Rockslide", base:0.70, dmg:[5,15] },
+  scavenger:{ name:"Scavenger", base:0.55, dmg:[6,14] },
+  sting: { name:"Sting", base:0.80, dmg:[1,3] },
+  shark: { name:"Shark", base:0.45, dmg:[15,30] },
+};
+const HUNTABLE_THREATS = {
+  wolf:      { tier:'large', fightBase:0.30, successScale:1.0, cap:0.75 },
+  bear:      { tier:'apex',  fightBase:0.25, successScale:1.0, cap:0.70 },
+  snake:     { tier:'small', fightBase:0.35, successScale:1.0, cap:0.75 },
+  scavenger: { tier:'small', fightBase:0.35, successScale:1.0, cap:0.75 },
+  shark:     { tier:'apex',  fightBase:0.06, successScale:0.5, cap:0.30 },
+};
+function awardThreatKill(key, w){
+  const tier = HUNTABLE_THREATS[key].tier;
+  state.huntWins += 1;
+  logMsg(`You turn the tables — your ${w.label.toLowerCase()} finds an opening.`, 'good');
+  if(tier === 'small'){
+    const amt = randInt(1,2);
+    state.inv.meat += amt;
+    logMsg(`+${amt} Raw Meat.`, 'good');
+  } else {
+    state.carcass[tier] += 1;
+    logMsg(`You'll need to dress it, same as any other kill.`, 'good');
+  }
+}
+function applyThreat(key){
+  const t = THREATS[key];
+  logDivider();
+  logMsg(`Threat: ${t.name}!`, 'warn');
+  const w = bestDefenseWeapon();
+  const ht = HUNTABLE_THREATS[key];
+  if(w && ht){
+    const fightChance = clamp(ht.fightBase + w.successMod * ht.successScale, 0.03, ht.cap);
+    if(roll(fightChance)){
+      awardThreatKill(key, w);
+      return;
+    }
+  }
+  const dodge = clamp(t.base + (w ? Math.max(0,w.dodgeMod) : 0), 0.05, 0.95);
+  if(roll(dodge)){
+    logMsg(`Dodge succeeded — you get clear unharmed.`, 'good');
+  } else {
+    const dmg = randInt(t.dmg[0], t.dmg[1]);
+    state.hp = clamp(state.hp - dmg, 0, state.maxHp);
+    logMsg(`Dodge failed — the ${t.name.toLowerCase()} catches you. -${dmg} HP.`, 'danger');
+  }
+}
+const STORM_FRAMES = [
+  "  / / / /  ",
+  "   / / / / ",
+  "    / / / /",
+  " / / / /   ",
+  "  / / / /  "
+];
+function applyStorm(){
+  logDivider();
+  logMsg("Threat: Storm!", 'warn');
+  logAnimated(STORM_FRAMES, 'info', 130, 2);
+  if(state.shelter.tarp){
+    logMsg("The tarp holds against the wind and rain. You're fine.", 'good');
+    return;
+  }
+  const tier = shelterTier();
+  const severity = tier>=2 ? [4,9,5] : tier>=1 ? [6,13,8] : [9,18,12];
+  const dmg = randInt(severity[0], severity[1]);
+  state.hp = clamp(state.hp-dmg,0,100);
+  state.energy = clamp(state.energy-severity[2],0,100);
+  logMsg(`Wind and rain lash at you with nothing to block it. -${dmg} HP.`, 'danger');
+}
+function applyPoison(kind, dmgRange){
+  const dmg = randInt(dmgRange[0], dmgRange[1]);
+  state.hp = clamp(state.hp - Math.round(dmg*0.55), 0, state.maxHp);
+  state.sick = Math.max(state.sick, randInt(3,5));
+  logMsg(`${kind} sets in. -${Math.round(dmg*0.55)} HP now, and it's not done with you yet.`, 'danger');
+}
+
+// ============================ FIRE ============================
+function fireLabel(){
+  if(state.fire.state==='lit') return Math.round(state.fire.meter)+'%';
+  if(state.fire.state==='embers') return 'EMBERS';
+  return 'OUT';
+}
+function fireTick(){
+  if(state.fire.state==='lit'){
+    state.fire.meter -= 4;
+    if(state.fire.meter <= 0){
+      state.fire.meter = 0; state.fire.state='embers'; state.fire.embersLeft = 15;
+      logMsg("The fire burns down to embers.", 'warn');
+    }
+  } else if(state.fire.state==='embers'){
+    state.fire.embersLeft -= 1;
+    if(state.fire.embersLeft <= 0){
+      state.fire.state='out';
+      logMsg("The embers finally die. The fire is out.", 'warn');
+    }
+  }
+}
+
+// ============================ ADVANCE TIME ============================
+function advanceTime(cost){
+  state.totalTicks += 1;
+  state.energy = clamp(state.energy - cost, 0, 100);
+  state.timeIdx++;
+  if(state.timeIdx > 3){
+    state.timeIdx = 0;
+    state.day++;
+    logDivider();
+    logMsg(`— Dawn breaks. Day ${state.day} begins. —`, 'sys');
+    logDivider();
+    spoilageCheck();
+  }
+  const isNight = TIMES[state.timeIdx] === "NIGHT";
+
+  state.hunger = clamp(state.hunger - (3 + Math.random()*2), 0, 100);
+  state.thirst = clamp(state.thirst - (4 + Math.random()*2), 0, 100);
+
+  // Warmth: continuous meter. Any maintained fire keeps you roughly stable; let it go out and you'll feel it.
+  const tier = shelterTier();
+  let warmthDelta = -(isNight ? 5 : 2.5);
+  if(state.fire.state==='lit') warmthDelta += 3;
+  else if(state.fire.state==='embers') warmthDelta += 1;
+  if(state.owned.clothing) warmthDelta += 1;
+  warmthDelta += tier * 0.5;
+  if(state.shelter.hotStonesActive > 0 && isNight){
+    state.shelter.hotStonesActive -= 1;
+    warmthDelta += 10;
+    logMsg("The heated stones keep the cold out completely.", 'good');
+  }
+  state.warmth = clamp(state.warmth + warmthDelta, 0, 100);
+
+  if(state.hunger <= 0){ state.hp = clamp(state.hp-6,0,100); logMsg("Starvation gnaws at you. HP draining.", 'danger'); }
+  if(state.thirst <= 0){ state.hp = clamp(state.hp-8,0,100); logMsg("Dehydration is killing you.", 'danger'); }
+  if(state.energy <= 0){ state.hp = clamp(state.hp-3,0,100); logMsg("Exhaustion drags at your limbs.", 'warn'); }
+  if(state.warmth <= 0){
+    const dmg = randInt(4,9);
+    state.hp = clamp(state.hp-dmg,0,100);
+    logMsg(`The cold has real teeth now. Hypothermia. -${dmg} HP.`, 'danger');
+  }
+  if(state.sick > 0){
+    const dmg = randInt(2,4);
+    state.hp = clamp(state.hp-dmg,0,100);
+    state.sick -= 1;
+    logMsg(state.sick>0 ? `Sickness lingers. -${dmg} HP.` : `The sickness finally breaks.`, 'warn');
+  }
+
+  // Sanity: slow drain, only partly eased by fire — real recovery needs actual rest, not just warmth.
+  let sanityDelta = -(isNight ? 1.5 : 0.7);
+  if(state.fire.state==='lit') sanityDelta += 0.6;
+  if(state.hp < 30) sanityDelta -= 0.8;
+  state.sanity = clamp(state.sanity + sanityDelta, 0, 100);
+  if(state.sanity <= 0){
+    const dmg = randInt(2,5);
+    state.hp = clamp(state.hp-dmg,0,100);
+    logMsg(`You can't hold it together anymore. -${dmg} HP.`, 'danger');
+  }
+  if(state.sanity <= 15 && roll(0.06)){
+    logMsg(pick([
+      "You could swear you heard something that wasn't the waves.",
+      "For a second, the treeline looked staged. Then it didn't.",
+      "You keep losing time. Not much. Just a little."
+    ]), 'lore');
+  }
+
+  fireTick();
+
+  const undressed = state.carcass.medium + state.carcass.large + state.carcass.apex;
+  if(undressed > 0 && roll(0.05)){
+    logMsg("The undressed kill has drawn something in.", 'warn');
+    applyThreat('scavenger');
+  }
+
+  if(isNight){ nightCheck(); }
+
+  checkEndings();
+  refreshUI();
+}
+
+function spoilageCheck(){
+  if(state.inv.cookedMeat > 4){
+    const excess = state.inv.cookedMeat - 4;
+    const lost = Math.ceil(excess / 2);
+    state.inv.cookedMeat -= lost;
+    state.taintedCooked = Math.min(state.taintedCooked, state.inv.cookedMeat);
+    logMsg(`Some of your cooked meat is starting to turn. -${lost}.`, 'warn');
+  }
+  const unsaltedRaw = state.inv.meat - state.saltedMeat;
+  if(unsaltedRaw > 5){
+    const excess = unsaltedRaw - 5;
+    const lost = Math.ceil(excess / 2);
+    state.inv.meat -= lost;
+    state.taintedRaw = Math.min(state.taintedRaw, state.inv.meat);
+    logMsg(`Some of your unsalted raw meat has spoiled. -${lost}. Cured meat keeps.`, 'warn');
+  }
+}
+
+function shelterTier(){
+  const f = state.shelter.frameScore;
+  if(f >= 50) return 3;
+  if(f >= 25) return 2;
+  if(f >= 10) return 1;
+  return 0;
+}
+function nightCheck(){
+  const tier = shelterTier();
+  const frameDodgeBonus = [0,0.05,0.10,0.15][tier];
+  const r = Math.random();
+  if(r < 0.16){
+    logDivider();
+    logMsg("Threat: Wolf!", 'warn');
+    const w = bestDefenseWeapon();
+    if(w){
+      const ht = HUNTABLE_THREATS.wolf;
+      const fightChance = clamp(ht.fightBase + w.successMod * ht.successScale, 0.03, ht.cap);
+      if(roll(fightChance)){ awardThreatKill('wolf', w); return; }
+    }
+    const dodge = clamp(0.50 + (w ? Math.max(0,w.dodgeMod) : 0) + frameDodgeBonus, 0.05, 0.95);
+    if(roll(dodge)){ logMsg("It circles, then thinks better of it.", 'good'); }
+    else { const dmg = randInt(8,16); state.hp=clamp(state.hp-dmg,0,100); logMsg(`It gets a bite in before fleeing. -${dmg} HP.`, 'danger'); }
+  } else if(r < 0.26){
+    applyStorm();
+  } else {
+    logMsg("A quiet night passes.", 'sys');
+  }
+}
+
+// ============================ GAME OVER (death only) ============================
+const FLATLINE_FRAMES = [
+  "~~/\\~~/\\~~/\\~~",
+  "~~/\\~~/\\~~/\\~~",
+  "~~/\\_/\\~~/\\~~",
+  "~~/\\_______~~",
+  "______________"
+];
+function checkEndings(){
+  if(state.hp <= 0 && !state.gameOver){
+    state.gameOver = true;
+    state.hp = 0; state.pendingEncounter=null;
+    logAnimated(FLATLINE_FRAMES, 'danger', 220, 1);
+    logMsg("=================================", 'danger');
+    logMsg("YOU HAVE DIED.", 'danger');
+    logMsg(`You survived ${state.day} day(s).`, 'danger');
+    logMsg("=================================", 'danger');
+  }
+}
+
+// ============================ DISCOVERY ============================
+function tierForDay(day){
+  if(day <= 3) return 0;
+  if(day <= 8) return 1;
+  if(day <= 14) return 2;
+  return 3;
+}
+function discoveryChanceForDay(day){
+  return [0.10, 0.20, 0.30, 0.45][tierForDay(day)];
+}
+function tryDiscovery(){
+  if(!roll(discoveryChanceForDay(state.day))) return;
+  const t = tierForDay(state.day);
+  let pool = [];
+  for(let i=0;i<=t;i++) pool = pool.concat(DISCOVERY_TIERS[i]);
+  pool = pool.filter(s => !state.journal.includes(s));
+  if(pool.length === 0) return;
+  const entry = pick(pool);
+  state.journal.push(entry);
+  logDivider();
+  logMsg(`Journal: ${entry}`, 'lore');
+  logDivider();
+}
+function addJournal(entry){
+  if(!state.journal.includes(entry)){
+    state.journal.push(entry);
+    logDivider();
+    logMsg(`Journal: ${entry}`, 'lore');
+    logDivider();
+  }
+}
+
+// ============================ REVEAL-GATE HELPERS ============================
+function reskinChance(){
+  if(state.showEnded) return 0; // arc fully resolved — wildlife only, for good
+  if(state.warningsGiven > 0) return 0.12; // killed at least one — now an occasional, optional hunt target
+  const n = state.journal.length;
+  if(n >= CREW_THRESHOLD) return 1.0;
+  return clamp(n * 0.05, 0, 0.3);
+}
+function reliabilityUnlocked(){ return state.warningsGiven > 0; }
+
+// ============================ ENCOUNTERS ============================
+const HOST_REVEAL_TEXT = "a man in a camouflage tuxedo, bursting from the underbrush, microphone already raised";
+function spotEncounter(tier, source){
+  const reskin = roll(reskinChance());
+  let flavor, flavorType = null, isHostReveal = false;
+  if(reskin){
+    flavorType = state.securityActive ? 'security' : 'crew';
+    if(!state.hostRevealSeen){
+      state.hostRevealSeen = true;
+      isHostReveal = true;
+      tier = 'medium';
+      flavor = HOST_REVEAL_TEXT;
+    } else {
+      flavor = pick(flavorType==='security' ? SECURITY_FLAVOR[tier] : REVEAL_FLAVOR[tier]);
+    }
+  } else {
+    flavor = pick(PREY[tier]);
+  }
+  const text = reskin ? `You spot ${flavor}.` : `You spot a ${flavor}.`;
+  state.pendingEncounter = { tier, reskin, flavorType, source, flavorText:text, isHostReveal };
+  logMsg(text, reskin?'lore':'info');
+  if(isHostReveal){
+    logMsg("\"CONGRATULATIONS!\" he bellows, striding toward you. \"YOU'VE WON ISLANDER — THE EDGY NEW METACONSENT REALITY SHOW!\"", 'lore');
+  }
+  refreshUI();
+}
+
+function consumeWeaponAmmo(weaponKey){
+  if(weaponKey === 'pistol' && state.inv.ammo > 0){
+    state.inv.ammo -= 1;
+  }
+}
+function resolveHostReveal(weaponKey){
+  const w = WEAPONS.find(x=>x.key===weaponKey) || WEAPONS[0];
+  state.huntWins += 1;
+  state.carcass.medium += 1;
+  state.humanCarcassPending.medium = (state.humanCarcassPending.medium||0) + 1;
+  logMsg(`Your ${w.label.toLowerCase()} connects before he finishes the sentence. He goes down. You'll need to dress him, same as anything else out here.`, 'good');
+  triggerKillEscalation();
+  advanceTime(15);
+}
+function resolveEncounterChoice(choiceOrWeapon){
+  const enc = state.pendingEncounter;
+  state.pendingEncounter = null;
+  if(enc.isHostReveal){
+    consumeWeaponAmmo(choiceOrWeapon);
+    resolveHostReveal(choiceOrWeapon);
+    return;
+  }
+  if(choiceOrWeapon === 'leave'){
+    logMsg(enc.reskin ? "You let it go. The show goes on." : "You let it go.", 'sys');
+    advanceTime(8);
+    return;
+  }
+  consumeWeaponAmmo(choiceOrWeapon);
+  resolveHunt(enc.tier, choiceOrWeapon, enc.source, enc.reskin);
+}
+
+function triggerKillEscalation(){
+  state.personKillCount += 1;
+  if(state.warningsGiven < WARNING_SEQUENCE.length){
+    const idx = state.warningsGiven;
+    state.warningsGiven += 1;
+    if(state.warningsGiven === SECURITY_ACTIVATES_AFTER_WARNING) state.securityActive = true;
+    state.pendingReveal = { type:'warning', index: idx, tier: null };
+  } else if(!state.showEnded){
+    state.showEnded = true;
+    addJournal("The speaker finally goes quiet. Whatever this was, it isn't watching anymore.");
+    state.pendingReveal = { type:'farewell' };
+  }
+}
+
+const HUNT_ROLL_FRAMES = ["ROLLING.", "ROLLING..", "ROLLING..."];
+function resolveHunt(tier, weaponKey, source, isHuman){
+  const w = WEAPONS.find(x=>x.key===weaponKey) || WEAPONS[0];
+  const t = TIER_STATS[tier];
+  const skillBonus = Math.min(0.10, Math.floor(state.huntWins/5) * 0.01);
+  const successChance = clamp(t.success + w.successMod + skillBonus, 0.03, 0.97);
+  const rollValue = Math.random();
+  const hit = rollValue < successChance;
+  const rollPct = Math.round(rollValue*100);
+  const needPct = Math.round(successChance*100);
+  logAnimated(HUNT_ROLL_FRAMES, 'sys', 120, 1);
+  logMsg(`Roll: ${rollPct} / needed under ${needPct} — ${hit?'HIT':'MISS'}`, hit?'good':'warn');
+  if(hit){
+    state.huntWins += 1;
+    if(tier === 'small'){
+      const amt = randInt(1,2);
+      state.inv.meat += amt;
+      if(isHuman) state.taintedRaw += amt;
+      logMsg(`Your ${w.label.toLowerCase()} finds its mark. +${amt} Raw Meat.${isHuman?" It doesn't feel like the others.":''}`, 'good');
+    } else {
+      state.carcass[tier] += 1;
+      if(isHuman) state.humanCarcassPending[tier] = (state.humanCarcassPending[tier]||0) + 1;
+      logMsg(isHuman
+        ? "It's down. You'll need to dress it, same as anything else out here."
+        : `Your ${w.label.toLowerCase()} brings it down. You'll need to dress the carcass to get anything usable from it.`, 'good');
+    }
+    if(isHuman) triggerKillEscalation();
+  } else {
+    logMsg("It gets away.", 'warn');
+  }
+  if(roll(t.threatChance)){
+    const threatKey = pick(t.threats);
+    const tt = THREATS[threatKey];
+    logDivider();
+    logMsg(`Threat: ${tt.name}!`, 'warn');
+    const dodge = clamp(tt.base + w.dodgeMod, 0.05, 0.95);
+    if(roll(dodge)){ logMsg("You keep your distance and it backs off.", 'good'); }
+    else { const dmg = randInt(tt.dmg[0], tt.dmg[1]); state.hp=clamp(state.hp-dmg,0,100); logMsg(`It gets to you before you can react. -${dmg} HP.`, 'danger'); }
+  }
+  advanceTime(12);
+}
+
+// ============================ GATHER ============================
+function gatherSticks(){
+  const amt = randInt(5,7);
+  state.inv.sticks += amt;
+  logMsg(`You gather ${amt} sticks.`, 'good');
+  advanceTime(8);
+}
+function gatherTwigs(){
+  const amt = randInt(5,7);
+  state.inv.twigs += amt;
+  logMsg(`You gather ${amt} twigs.`, 'good');
+  advanceTime(6);
+}
+function gatherLeaves(){
+  const amt = randInt(8,12);
+  state.inv.leaves += amt;
+  logMsg(`You gather ${amt} leaves.`, 'good');
+  advanceTime(6);
+}
+function gatherDirt(){
+  const amt = randInt(6,10);
+  state.inv.dirt += amt;
+  logMsg(`You dig up ${amt} dirt.`, 'good');
+  advanceTime(6);
+}
+function gatherLogs(){
+  if(state.owned.axe){
+    const amt = randInt(4,6);
+    state.inv.logs += amt;
+    logMsg(`You cut ${amt} logs free with the axe.`, 'good');
+    if(roll(0.10)) applyThreat('branch');
+    advanceTime(14);
+  } else {
+    const amt = randInt(1,2);
+    state.inv.logs += amt;
+    logMsg(`You drag ${amt} deadwood log(s) loose by hand. Slow going without an axe.`, 'good');
+    if(roll(0.20)) applyThreat('branch');
+    advanceTime(20);
+  }
+}
+function gatherStones(){
+  const amt = randInt(5,7);
+  let h=0,f=0,r=0;
+  for(let i=0;i<amt;i++){
+    const rr = Math.random();
+    if(rr<0.34){ h++; state.inv.hardStone++; }
+    else if(rr<0.67){ f++; state.inv.flatStone++; }
+    else { r++; state.inv.roundStone++; }
+  }
+  logMsg(`You collect ${amt} stones: ${h} Hard, ${f} Flat, ${r} Round.`, 'good');
+  if(roll(0.10)) applyThreat('slide');
+  advanceTime(8);
+}
+function searchVine(){
+  const amt = randInt(2,4);
+  state.inv.vine += amt;
+  logMsg(`You pull down ${amt} lengths of vine.`, 'good');
+  if(roll(0.08)) applyThreat('snake');
+  advanceTime(8);
+}
+function searchContainer(){
+  if(state.owned.container) return;
+  if(roll(0.5)){
+    const flavor = pick(["a coconut shell, hollowed and sound","a dried gourd, hard-shelled and hollow","a length of bamboo, naturally sealed at one end"]);
+    state.owned.container = true;
+    logMsg(`You find ${flavor} — something to hold water in, finally.`, 'good');
+  } else {
+    logMsg("Nothing usable washes up this search.", 'sys');
+  }
+  advanceTime(8);
+}
+function findWater(){
+  if(roll(0.08)) applyThreat('snake');
+  if(state.owned.container){
+    const amt = randInt(3,5);
+    state.inv.rawWater += amt;
+    logMsg(`You fill up with ${amt} unit(s) of murky water.`, 'good');
+  } else {
+    const before = state.thirst;
+    state.thirst = clamp(state.thirst + 35, 0, 100);
+    logMsg(`No way to carry it, so you drink straight from the source. Thirst ${Math.round(before)}→${Math.round(state.thirst)}.`, 'good');
+    if(roll(0.14)) applyPoison("Contaminated water", [8,16]);
+  }
+  advanceTime(8);
+}
+function fishAction(){
+  if(!state.owned.fishHook) return;
+  if(roll(0.65)){
+    const amt = randInt(1,3);
+    state.inv.meat += amt;
+    logMsg(`The line goes taut. +${amt} Raw Meat (fish).`, 'good');
+  } else {
+    logMsg("Nothing bites this time.", 'sys');
+  }
+  advanceTime(10);
+}
+const TRAP_COST = { sticks:8, vine:6, leaves:6 };
+const TRAP_MATURE_TICKS = 3;
+function setTrap(){
+  if(!canAfford(TRAP_COST)) return;
+  Object.entries(TRAP_COST).forEach(([k,v]) => state.inv[k] -= v);
+  state.traps.push(state.totalTicks + TRAP_MATURE_TICKS);
+  logMsg("You rig a trap and leave it be. It'll need time to do its work.", 'good');
+  advanceTime(10);
+}
+function checkTraps(){
+  if(state.traps.length === 0) return;
+  const readyIdx = [];
+  state.traps.forEach((readyAt, i) => { if(readyAt <= state.totalTicks) readyIdx.push(i); });
+  if(readyIdx.length === 0){
+    logMsg("Your traps haven't had enough time yet. Come back later.", 'sys');
+    advanceTime(6);
+    return;
+  }
+  readyIdx.slice().reverse().forEach(i => state.traps.splice(i,1));
+  let caught = 0;
+  readyIdx.forEach(()=>{
+    if(roll(0.08)) applyThreat(pick(['snake','scavenger']));
+    if(roll(0.55)){ const amt = randInt(1,2); state.inv.meat += amt; caught += amt; }
+  });
+  logMsg(caught>0
+    ? `You check your traps: +${caught} Raw Meat from ${readyIdx.length} sprung.`
+    : `You check ${readyIdx.length} trap(s). Empty, all of them this time.`, caught>0?'good':'sys');
+  advanceTime(8);
+}
+function resolveTinyForage(flavorPool, guaranteed){
+  const found = guaranteed || roll(0.75);
+  if(found){
+    const food = pick(flavorPool);
+    const isHoney = flavorPool===FOOD_FLAVORS && roll(0.12);
+    const label = isHoney ? 'honey' : food;
+    const tRoll = Math.random();
+    let tier, hint;
+    if(tRoll < 0.55){ tier='wildFoodSafe'; hint=`You recognize the ${label} — safe to eat.`; }
+    else if(tRoll < 0.85){ tier='wildFoodUncertain'; hint=`You find ${label} you can't confidently identify. Could be fine. Could not be.`; }
+    else { tier='wildFoodRisky'; hint=`These ${label} have every warning sign of trouble. Hunger doesn't care.`; }
+    state.inv[tier] += 1;
+    logMsg(hint, 'info');
+    if(isHoney && roll(0.4)) applyThreat('sting');
+    if(roll(0.15)){ state.inv.herbs += 1; logMsg("You also spot a medicinal herb.", 'sys'); }
+  } else {
+    logMsg("Nothing edible turns up this time.", 'sys');
+  }
+  advanceTime(8);
+}
+function forageFood(){
+  if(roll(0.06)) applyThreat('snake');
+  resolveTinyForage(FOOD_FLAVORS, false);
+}
+function huntAction(){
+  const r = Math.random();
+  const tier = r<0.46 ? 'small' : r<0.74 ? 'medium' : r<0.92 ? 'large' : 'apex';
+  spotEncounter(tier, 'hunt');
+}
+
+// ============================ EXPLORE ============================
+const LOCATION_INFO = {
+  wreckage:      { label:'Wreckage', desc:'Salvage and clues from the crash.' },
+  pond:          { label:'Pond', desc:'Still water. Frogs, snails, the odd snake.' },
+  stream:        { label:'Stream', desc:'Running water over a stony bed.' },
+  river:         { label:'River', desc:'A real water source — and bigger crossings.' },
+  mushroomPatch: { label:'Mushroom Patch', desc:'Reliable foraging, herbs too.' },
+  field:         { label:'Field', desc:'Open ground. Sticks, twigs, small game.' },
+  treeGrove:     { label:'Tree Grove', desc:'Logs, vine, coconuts — and the odd fox.' },
+  supplyShack:   { label:'Supply Shack', desc:"A stocked shed that shouldn't be here. Return for ammo.", unlock: ()=> state.journal.length >= 3 },
+};
+function exploreWander(){
+  tryDiscovery();
+  const undiscovered = Object.keys(LOCATION_INFO).filter(k=>!state.locations[k] && (!LOCATION_INFO[k].unlock || LOCATION_INFO[k].unlock()));
+  const locChance = undiscovered.length>0 ? 0.20 : 0;
+  const cacheChance = reliabilityUnlocked() ? 0.26 : 0.16;
+  const r = Math.random();
+  let cum = locChance;
+  if(r < cum){
+    const key = pick(undiscovered);
+    state.locations[key] = true;
+    logMsg(`You find your way to a ${LOCATION_INFO[key].label.toLowerCase()} — worth remembering, worth returning to.`, 'good');
+  } else if(r < (cum += cacheChance)){
+    giveCache();
+  } else if(r < (cum += 0.12)){
+    state.inv.herbs += 1;
+    logMsg("You find a patch of medicinal herbs.", 'good');
+  } else if(r < (cum += 0.18)){
+    if(roll(0.3)) applyStorm();
+    else applyThreat(pick(['wolf','snake','branch']));
+  } else {
+    const grabBag = [];
+    const stAmt = randInt(1,3); state.inv.sticks += stAmt; grabBag.push(`+${stAmt} Sticks`);
+    const lvAmt = randInt(1,3); state.inv.leaves += lvAmt; grabBag.push(`+${lvAmt} Leaves`);
+    const stoneType = pick(['hardStone','flatStone','roundStone']);
+    const rkAmt = randInt(1,2); state.inv[stoneType] += rkAmt; grabBag.push(`+${rkAmt} ${RESOURCE_LABELS[stoneType]}`);
+    if(roll(0.35)){ state.inv.wildFoodSafe += 1; grabBag.push('+1 Wild Food (Safe)'); }
+    if(roll(0.25) && state.owned.container){ state.inv.rawWater += 1; grabBag.push('+1 Raw Water'); }
+    logMsg(`Nothing major, but the trip wasn't wasted: ${grabBag.join(', ')}.`, 'good');
+  }
+  advanceTime(15);
+}
+function visitWreckage(){
+  logMsg("You paddle out past the break. The water goes dark fast out here.", 'sys');
+  applyThreat('shark');
+  if(state.hp > 0) giveWreckageItem();
+  advanceTime(15);
+}
+function visitPond(){
+  if(roll(0.08)) applyThreat('snake');
+  if(state.owned.container){
+    const amt = randInt(4,6);
+    state.inv.rawWater += amt;
+    logMsg(`The pond gives up ${amt} unit(s) of water, easy.`, 'good');
+  } else {
+    const before = state.thirst;
+    state.thirst = clamp(state.thirst+35,0,100);
+    logMsg(`No container, so you drink straight from the pond. Thirst ${Math.round(before)}→${Math.round(state.thirst)}.`, 'good');
+    if(roll(0.14)) applyPoison("Contaminated water", [8,16]);
+  }
+  if(roll(0.20)){ spotEncounter('small','pond'); return; }
+  advanceTime(10);
+}
+function visitStream(){
+  if(roll(0.06)) applyThreat('snake');
+  if(state.owned.container){
+    const amt = randInt(3,5);
+    state.inv.rawWater += amt;
+    logMsg(`You fill up with ${amt} unit(s) of water from the stream.`, 'good');
+  } else {
+    const before = state.thirst;
+    state.thirst = clamp(state.thirst+30,0,100);
+    logMsg(`You drink from the stream. Thirst ${Math.round(before)}→${Math.round(state.thirst)}.`, 'good');
+    if(roll(0.10)) applyPoison("Contaminated water", [8,16]);
+  }
+  if(roll(0.35)){
+    const amt = randInt(2,4);
+    let h=0,r=0;
+    for(let i=0;i<amt;i++){ if(roll(0.4)){ h++; state.inv.hardStone++; } else { r++; state.inv.roundStone++; } }
+    logMsg(`Streambed stones: +${h} Hard, +${r} Round — water wears them smooth.`, 'good');
+  }
+  advanceTime(10);
+}
+function visitRiver(){
+  if(roll(0.10)) applyThreat('snake');
+  if(state.owned.container){
+    const amt = randInt(5,7);
+    state.inv.rawWater += amt;
+    logMsg(`The river gives up ${amt} unit(s) of water.`, 'good');
+  } else {
+    const before = state.thirst;
+    state.thirst = clamp(state.thirst+35,0,100);
+    logMsg(`You drink from the river. Thirst ${Math.round(before)}→${Math.round(state.thirst)}.`, 'good');
+    if(roll(0.12)) applyPoison("Contaminated water", [8,16]);
+  }
+  if(roll(0.30)){ spotEncounter(roll(0.5)?'medium':'large', 'river'); return; }
+  advanceTime(12);
+}
+function visitMushroomPatch(){
+  if(roll(0.20)){ state.inv.herbs += 1; logMsg("You spot medicinal herbs among the mushrooms.", 'good'); }
+  resolveTinyForage(['mushrooms','mushrooms','mushrooms','wild leaves'], true);
+}
+function visitField(){
+  const amt1 = randInt(3,5), amt2 = randInt(3,5), amt3 = randInt(4,6);
+  state.inv.sticks += amt1; state.inv.twigs += amt2; state.inv.leaves += amt3;
+  logMsg(`Open ground, easy pickings: +${amt1} Sticks, +${amt2} Twigs, +${amt3} Leaves.`, 'good');
+  if(roll(0.30)){ spotEncounter('small','field'); return; }
+  advanceTime(10);
+}
+function visitTreeGrove(){
+  if(roll(0.15)) applyThreat('branch');
+  if(roll(0.35)){
+    state.inv.wildFoodSafe += 1;
+    logMsg("You knock down a coconut. Safe, filling food.", 'good');
+  }
+  const vineAmt = randInt(2,4);
+  state.inv.vine += vineAmt;
+  logMsg(`+${vineAmt} vine from the grove.`, 'good');
+  if(roll(0.25)){ spotEncounter(roll(0.4)?'medium':'small', 'grove'); return; }
+  advanceTime(12);
+}
+function visitSupplyShack(){
+  const finds = [];
+  if(!state.owned.pistol){
+    state.owned.pistol = true;
+    const ammoAmt = randInt(5,7);
+    state.inv.ammo += ammoAmt;
+    finds.push(`a pistol with ${ammoAmt} rounds`);
+  } else {
+    const ammoAmt = randInt(2,4);
+    state.inv.ammo += ammoAmt;
+    finds.push(`${ammoAmt} more rounds of ammo`);
+  }
+  if(roll(0.6)){ const w=randInt(2,4); state.inv.safeWater += w; finds.push(`${w} bottled water`); }
+  if(roll(0.5)){ const c=randInt(1,2); state.inv.wildFoodSafe += c; finds.push(`${c} sleeve(s) of crackers`); }
+  if(roll(0.4)){ const b=randInt(2,5); state.inv.fabric += b; finds.push(`${b} bedding`); }
+  logMsg(`Supply shack: ${finds.join(', ')}. None of it should be this fresh.`, 'lore');
+  advanceTime(12);
+}
+function giveCache(){
+  if(reliabilityUnlocked()){
+    let target;
+    if(state.thirst < 40) target = 'rawWater';
+    else if(state.hunger < 40) target = state.owned.axe? 'cookedMeat':'wildFoodSafe';
+    else {
+      const basics = ['sticks','twigs','leaves','logs'];
+      target = basics.reduce((a,b)=> state.inv[a] <= state.inv[b] ? a : b);
+    }
+    state.inv[target] += 2;
+    logMsg(`You find a cache: exactly 2 ${RESOURCE_LABELS[target]||target} you needed. Again.`, 'lore');
+  } else {
+    const basics = ['sticks','twigs','leaves','vine'];
+    const target = pick(basics);
+    const amt = randInt(1,3);
+    state.inv[target] += amt;
+    logMsg(`You stumble on an abandoned stash: +${amt} ${RESOURCE_LABELS[target]||target}.`, 'good');
+  }
+}
+function giveWreckageItem(){
+  const owned = state.owned, inv = state.inv;
+  const alreadyHave = {
+    mug: owned.container, bottle: owned.container, pocketknife: owned.knife,
+    tarp: owned.tarpItem, lighter: inv.lighterCharges>0, phone: inv.phoneBattery>0, lifeVest: owned.lifeVest
+  };
+  const pool = WRECKAGE_ITEMS.filter(it => !alreadyHave[it.id]);
+  if(pool.length===0){
+    const amt = randInt(2,4);
+    state.inv.fabric += amt;
+    logMsg(`Nothing new, but you didn't paddle out here for nothing: +${amt} Fabric Scraps off the wreckage.`, 'good');
+    return;
+  }
+  const item = pick(pool);
+  const result = item.give();
+  logMsg(`Among the wreckage: ${item.label}. ${result}`, 'good');
+  if(item.journal) addJournal(item.journal);
+}
+
+// ============================ CRAFT ============================
+function canAfford(cost){ return Object.entries(cost).every(([k,v]) => (state.inv[k]||0) >= v); }
+function craftItem(id){
+  const c = CRAFTS.find(x=>x.id===id);
+  if(!c || state.owned[id] || !canAfford(c.cost)) return;
+  Object.entries(c.cost).forEach(([k,v]) => state.inv[k] -= v);
+  state.owned[id] = true;
+  logMsg(`Crafted: ${c.label}. ${c.unlocks}.`, 'good');
+  advanceTime(c.time);
+}
+function craftSharpStone(){
+  if(state.inv.flatStone < 2) return;
+  state.inv.flatStone -= 2;
+  if(roll(0.75)){
+    state.inv.sharpStone += 1;
+    logMsg("A clean strike — you knap a usable sharp stone.", 'good');
+  } else {
+    logMsg("The flake shatters wrong. Both stones wasted.", 'warn');
+  }
+  advanceTime(6);
+}
+function reinforceFrame(){
+  const s = state.inv.sticks, l = state.inv.logs, cordage = state.inv.vine + state.inv.driedVine;
+  if((s<=0 && l<=0) || cordage<=0) return;
+  const before = shelterTier();
+  const cordUsed = Math.min(cordage, 3);
+  let remaining = cordUsed;
+  const fromDried = Math.min(state.inv.driedVine, remaining); state.inv.driedVine -= fromDried; remaining -= fromDried;
+  const fromVine = Math.min(state.inv.vine, remaining); state.inv.vine -= fromVine;
+  state.shelter.frameScore += s + l*4 + cordUsed*2;
+  state.inv.sticks = 0; state.inv.logs = 0;
+  const after = shelterTier();
+  const names = ['no frame','a basic frame','a good frame','a solid frame'];
+  logMsg(`You lash ${s} sticks and ${l} logs together with ${cordUsed} cordage. It now has ${names[after]}.`, 'good');
+  if(after>before) logMsg("The shelter is sturdier than it was.", 'sys');
+  advanceTime(16);
+}
+function addBedding(){
+  const lv = state.inv.leaves, fb = state.inv.fabric;
+  if(lv<=0 && fb<=0) return;
+  state.shelter.beddingScore += lv + fb*2;
+  state.inv.leaves = 0; state.inv.fabric = 0;
+  logMsg(`You pack ${lv} leaves and ${fb} fabric scraps in as bedding.`, 'good');
+  advanceTime(10);
+}
+function addTarpToShelter(){
+  if(!state.owned.tarpItem || state.shelter.frameScore<=0) return;
+  state.shelter.tarp = true;
+  state.owned.tarpItem = false;
+  logMsg("You stretch the tarp over the frame. Should help with wind and rain.", 'good');
+  advanceTime(10);
+}
+
+// ============================ USE ============================
+const FIRE_CATCH_FRAMES = [
+  "   .    ",
+  "   :    ",
+  "  .;.   ",
+  "  (o)   ",
+  " ((*))  ",
+  " ((*))  "
+];
+function sparkFireFriction(){
+  if(state.inv.leaves<5 || state.inv.twigs<5) return;
+  const bonus = (state.owned.knife || state.inv.sharpStone>=1) ? 0.15 : 0;
+  if(roll(0.50+bonus)){
+    state.inv.leaves -= 5; state.inv.twigs -= 5;
+    state.fire.state='lit'; state.fire.meter=20;
+    logAnimated(FIRE_CATCH_FRAMES, 'fire', 140, 1);
+    logMsg("The tinder catches. You have fire.", 'fire');
+  } else {
+    state.inv.leaves -= 2; state.inv.twigs -= 2;
+    logMsg("No spark takes. Some tinder's wasted, but not all of it.", 'warn');
+  }
+  advanceTime(10);
+}
+function sparkFireLighter(){
+  if(state.inv.lighterCharges<=0 || state.inv.leaves<5 || state.inv.twigs<5) return;
+  state.inv.lighterCharges -= 1;
+  if(roll(0.95)){
+    state.inv.leaves -= 5; state.inv.twigs -= 5;
+    state.fire.state='lit'; state.fire.meter=20;
+    logAnimated(FIRE_CATCH_FRAMES, 'fire', 140, 1);
+    logMsg("One flick of the lighter and you have fire.", 'fire');
+  } else {
+    state.inv.leaves -= 2; state.inv.twigs -= 2;
+    logMsg("Even the lighter fails to catch this time.", 'warn');
+  }
+  advanceTime(6);
+}
+const FUEL_VALUES = { leaves:1.5, twigs:2, sticks:6, logs:20 };
+const FEED_DEFAULT = { leaves:5, twigs:5, sticks:3, logs:2 };
+function feedFireAmount(type, amount){
+  if(state.fire.state==='out') return;
+  const have = state.inv[type]||0;
+  const use = Math.min(have, amount);
+  if(use<=0) return;
+  const add = use * FUEL_VALUES[type];
+  state.inv[type] -= use;
+  const wasEmbers = state.fire.state==='embers';
+  state.fire.state='lit';
+  state.fire.meter = clamp(state.fire.meter + add, 0, 100);
+  logMsg(`You feed ${use} ${RESOURCE_LABELS[type].toLowerCase()} into the fire.${wasEmbers?' Back to a real flame.':''}`, 'fire');
+  advanceTime(6);
+}
+function feedFireAll(){
+  if(state.fire.state==='out') return;
+  const lv=state.inv.leaves, tw=state.inv.twigs, st=state.inv.sticks, lg=state.inv.logs;
+  if(lv<=0 && tw<=0 && st<=0 && lg<=0) return;
+  const add = lv*FUEL_VALUES.leaves + tw*FUEL_VALUES.twigs + st*FUEL_VALUES.sticks + lg*FUEL_VALUES.logs;
+  state.inv.leaves=0; state.inv.twigs=0; state.inv.sticks=0; state.inv.logs=0;
+  const wasEmbers = state.fire.state==='embers';
+  state.fire.state='lit';
+  state.fire.meter = clamp(state.fire.meter + add, 0, 100);
+  logMsg(wasEmbers ? "You feed everything you're carrying into the embers. Back to a real flame." : "You feed everything you're carrying into the fire. It burns brighter.", 'fire');
+  advanceTime(6);
+}
+function heatStone(type){
+  if(state.fire.state==='out') return;
+  if(type==='flat'){
+    if(state.inv.flatStone<=0) return;
+    state.inv.flatStone -= 1;
+    if(roll(0.95)){ state.inv.hotStone += 1; logMsg("The flat stone heats evenly. A good hot stone.", 'good'); }
+    else logMsg("It doesn't take the heat right. Wasted.", 'warn');
+  } else if(type==='round'){
+    if(state.inv.roundStone<=0) return;
+    state.inv.roundStone -= 1;
+    if(roll(0.40)){ state.inv.hotStone += 1; logMsg("It holds together and heats through.", 'good'); }
+    else {
+      logMsg("Trapped moisture cracks it with a sharp pop — round river stones do that.", 'warn');
+      if(roll(0.30)) applyPoison("A hot fragment catches you", [1,3]);
+    }
+  } else {
+    if(state.inv.hardStone<=0) return;
+    state.inv.hardStone -= 1;
+    logMsg("It just doesn't hold heat well. Wasted — hard stone isn't built for this.", 'warn');
+  }
+  advanceTime(8);
+}
+function dryVine(){
+  if(state.fire.state==='out' || state.inv.vine<=0) return;
+  state.inv.vine -= 1; state.inv.driedVine += 1;
+  logMsg("You dry a length of vine by the fire. Stronger cord for it.", 'good');
+  advanceTime(6);
+}
+function twistSinew(){
+  if(state.inv.sinew<=0) return;
+  state.inv.sinew -= 1; state.inv.driedVine += 1;
+  logMsg("You twist sinew into a length of cord. Stronger than vine.", 'good');
+  advanceTime(6);
+}
+function cookMeat(){
+  if(state.fire.state==='out' || state.inv.meat<=0) return;
+  const amt = Math.min(state.inv.meat, 2);
+  const unsaltedAvailable = state.inv.meat - state.saltedMeat;
+  state.inv.meat -= amt; state.inv.cookedMeat += amt;
+  if(amt > unsaltedAvailable){
+    const drawnFromSalted = amt - Math.max(0, unsaltedAvailable);
+    state.saltedMeat = Math.max(0, state.saltedMeat - drawnFromSalted);
+  }
+  if(state.taintedRaw > 0){
+    const moved = Math.min(state.taintedRaw, amt);
+    state.taintedRaw -= moved;
+    state.taintedCooked += moved;
+  }
+  logMsg(`You cook ${amt} meat over the fire.`, 'good');
+  advanceTime(6);
+}
+function makeSalt(){
+  if(state.fire.state==='out') return;
+  const amt = randInt(1,2);
+  state.inv.salt += amt;
+  logMsg(`You boil seawater down to grains. +${amt} Salt.`, 'good');
+  advanceTime(12);
+}
+function saltMeat(){
+  const unsalted = state.inv.meat - state.saltedMeat;
+  if(state.inv.salt<=0 || unsalted<=0) return;
+  const amt = Math.min(state.inv.salt, unsalted);
+  state.inv.salt -= amt;
+  state.saltedMeat += amt;
+  logMsg(`You rub salt into ${amt} portion(s) of raw meat. It's cured now — it'll keep.`, 'good');
+  advanceTime(6);
+}
+function boilWater(){
+  if(state.fire.state==='out' || state.inv.rawWater<=0) return;
+  const cap = state.owned.purifier ? 3 : 2;
+  const amt = Math.min(state.inv.rawWater, cap);
+  state.inv.rawWater -= amt; state.inv.safeWater += amt;
+  logMsg(`You boil ${amt} unit(s) of water.`, 'good');
+  advanceTime(6);
+}
+function dressCarcass(tier){
+  if(state.carcass[tier]<=0) return;
+  if(!(state.owned.knife || state.inv.sharpStone>=1)) return;
+  const totalBefore = state.carcass[tier];
+  const humanPending = state.humanCarcassPending[tier]||0;
+  state.carcass[tier] -= 1;
+  let dressedHuman = false;
+  if(humanPending > 0 && roll(humanPending / totalBefore)){
+    state.humanCarcassPending[tier] -= 1;
+    dressedHuman = true;
+  }
+  const d = DRESS_YIELD[tier];
+  const meatAmt = randInt(d.meat[0], d.meat[1]);
+  const sinewAmt = randInt(d.sinew[0], d.sinew[1]);
+  const skinAmt = randInt(d.skin[0], d.skin[1]);
+  state.inv.meat += meatAmt; state.inv.sinew += sinewAmt; state.inv.skin += skinAmt;
+  if(dressedHuman) state.taintedRaw += meatAmt;
+  let extra = '';
+  if(d.boneLong && roll(0.8)){ state.inv.boneLong += randInt(d.boneLong[0], d.boneLong[1]); extra += ' + long bone'; }
+  if(roll(d.boneShortChance)){ state.inv.boneShort += 1; extra += ' + short bone'; }
+  logMsg(dressedHuman
+    ? `You dress the kill. This one was a person, same tools, same process. +${meatAmt} meat, +${sinewAmt} sinew, +${skinAmt} skin${extra}.`
+    : `You dress the ${tier} carcass: +${meatAmt} meat, +${sinewAmt} sinew, +${skinAmt} skin${extra}.`, 'good');
+  advanceTime(10);
+}
+function addHotStoneToShelter(){
+  if(state.shelter.beddingScore<=0 || state.inv.hotStone<=0) return;
+  state.inv.hotStone -= 1;
+  state.shelter.hotStonesActive += 1;
+  state.shelter.dirtBed = false;
+  logMsg("You settle a hot stone into the bedding. Don't lie on it bare — pack dirt over it first.", 'good');
+  advanceTime(6);
+}
+function makeDirtBed(){
+  if(state.shelter.hotStonesActive<=0 || state.inv.dirt<5) return;
+  state.inv.dirt -= 5;
+  state.shelter.dirtBed = true;
+  logMsg("You pack a layer of dirt over the hot stones. Safe to lie on now, and it'll hold the heat longer.", 'good');
+  advanceTime(8);
+}
+function useHerb(){
+  if(state.inv.herbs<=0 || (state.hp>=state.maxHp && state.sick<=0)) return;
+  state.inv.herbs -= 1;
+  const healed = Math.min(20, state.maxHp-state.hp);
+  state.hp = clamp(state.hp+20,0,state.maxHp);
+  const wasSick = state.sick>0;
+  if(wasSick) state.sick = Math.max(0, state.sick-2);
+  logMsg(`You treat your wounds with herbs. +${healed} HP.${wasSick?' Eases the sickness some.':''}`, 'good');
+  advanceTime(4);
+}
+function useFirstAidKit(){
+  if(state.inv.firstAidKit<=0 || (state.hp>=state.maxHp && state.sick<=0)) return;
+  state.inv.firstAidKit -= 1;
+  const healed = Math.min(45, state.maxHp-state.hp);
+  state.hp = clamp(state.hp+45,0,state.maxHp);
+  const wasSick = state.sick>0;
+  state.sick = 0;
+  logMsg(`Proper supplies. +${healed} HP.${wasSick?' The sickness clears completely.':''}`, 'good');
+  advanceTime(6);
+}
+function checkPhone(){
+  if(state.inv.phoneBattery<=0) return;
+  state.inv.phoneBattery -= 1;
+  logMsg("You wake the screen. Battery ticks down a little more, slower than it should.", 'lore');
+  if(roll(0.5)) tryDiscoveryForced();
+  advanceTime(4);
+}
+function tryDiscoveryForced(){
+  const t = tierForDay(state.day);
+  let pool = [];
+  for(let i=0;i<=t;i++) pool = pool.concat(DISCOVERY_TIERS[i]);
+  pool = pool.filter(s => !state.journal.includes(s));
+  if(pool.length === 0) return;
+  addJournal(pick(pool));
+}
+
+// ============================ CONSUME ============================
+function eatWild(tier){
+  const key = 'wildFood'+tier;
+  if(state.inv[key] <= 0) return;
+  state.inv[key] -= 1;
+  state.hunger = clamp(state.hunger+22, 0, 100);
+  logMsg("You eat. Hunger eases a little.", 'good');
+  const poisonChance = tier==='Safe'?0:(tier==='Uncertain'?0.12:0.25);
+  if(roll(poisonChance)) applyPoison("Food poisoning", [8,18]);
+  refreshUI();
+}
+function eatMeatRaw(){
+  if(state.inv.meat<=0) return;
+  const unsaltedAvailable = state.inv.meat - state.saltedMeat;
+  state.inv.meat -= 1;
+  if(unsaltedAvailable <= 0){ state.saltedMeat = Math.max(0, state.saltedMeat - 1); }
+  state.hunger = clamp(state.hunger+40,0,100);
+  logMsg("You eat the meat raw. Hunger fades fast.", 'good');
+  if(state.taintedRaw > 0){
+    state.taintedRaw -= 1;
+    logMsg(pick(CANNIBALISM_LINES), 'lore');
+  }
+  if(roll(0.16)) applyPoison("Food poisoning", [10,20]);
+  refreshUI();
+}
+function eatMeatCooked(){
+  if(state.inv.cookedMeat<=0) return;
+  state.inv.cookedMeat -= 1;
+  state.hunger = clamp(state.hunger+55,0,100);
+  logMsg("Cooked meat. No risk, real relief.", 'good');
+  if(state.taintedCooked > 0){
+    state.taintedCooked -= 1;
+    logMsg(pick(CANNIBALISM_LINES), 'lore');
+  }
+  refreshUI();
+}
+function drinkRaw(){
+  if(state.inv.rawWater<=0) return;
+  state.inv.rawWater -= 1;
+  state.thirst = clamp(state.thirst+40,0,100);
+  logMsg("You drink the murky water.", 'good');
+  if(roll(0.14)) applyPoison("Contaminated water", [8,16]);
+  refreshUI();
+}
+function drinkSafe(){
+  if(state.inv.safeWater<=0) return;
+  state.inv.safeWater -= 1;
+  state.thirst = clamp(state.thirst+55,0,100);
+  logMsg("Clean water. No risk.", 'good');
+  refreshUI();
+}
+
+// ============================ REST ============================
+function doRest(){
+  if(state.shelter.hotStonesActive>0 && !state.shelter.dirtBed){
+    logMsg("The hot stones are still bare — pack a dirt layer over them before you lie down.", 'warn');
+    return;
+  }
+  const before = state.energy;
+  let bonus = 0;
+  if(state.shelter.beddingScore>=100) bonus += 15;
+  else if(state.shelter.beddingScore>=50) bonus += 10;
+  bonus += state.shelter.hotStonesActive * 5;
+  state.energy = clamp(state.energy+55+bonus,0,100);
+  state.sanity = clamp(state.sanity+4,0,100);
+  if(state.hunger>=50 && state.thirst>=50 && state.hp<state.maxHp){
+    state.hp = clamp(state.hp+10,0,state.maxHp);
+    logMsg(`You rest. Energy ${Math.round(before)}→${Math.round(state.energy)}. Well-fed, you recover +10 HP.`, 'sys');
+  } else {
+    logMsg(`You rest. Energy ${Math.round(before)}→${Math.round(state.energy)}.`, 'sys');
+  }
+  advanceTime(10);
+}
+
+// ============================ ADVISOR ============================
+function advisorText(){
+  if(state.hp < 25) return "Critical: find a safe moment to heal or rest.";
+  if(!state.owned.container) return "No container yet — Gather ▾ → Find Water still works, just drink-on-the-spot only.";
+  if(state.thirst < 25) return "Thirst critical — drink water now.";
+  if(state.hunger < 25) return "Hunger critical — eat something.";
+  if(state.warmth < 25) return "Warmth critical — get to a fire or build shelter.";
+  if(state.sick > 0) return "You're sick — herbs help, a First-Aid Kit cures it outright.";
+  if(state.energy < 15) return "Exhausted — rest soon.";
+  const undressed = state.carcass.medium+state.carcass.large+state.carcass.apex;
+  if(undressed>0) return "An undressed carcass is drawing attention — Use ▾ → Stone or Knife to dress it.";
+  if(state.fire.state==='out') return "No fire — Use ▾ → Kindling → Start Fire (needs 5 Leaves + 5 Twigs).";
+  if(state.fire.state==='embers') return "Fire's down to embers — feed it before it dies.";
+  if(shelterTier()===0 && state.timeIdx>=2) return "No shelter frame — risky tonight.";
+  if(shelterTier()===0) return "Consider starting a shelter frame before dark.";
+  if(state.sanity < 30) return "Something's wearing on you. Rest and firelight help.";
+  if(state.journal.length>=3 && !state.locations.supplyShack) return "There's more out there to find — keep exploring unknown areas.";
+  return "Stay stocked. Keep moving.";
+}
+
+// ============================ MODAL SYSTEM ============================
+function openModal(id){
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open'));
+  document.getElementById(id).classList.add('open');
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+function closeModal(){
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open'));
+  document.getElementById('modalBackdrop').classList.remove('open');
+  if(state.openMenu !== 'encounter'){ state.openMenu = null; }
+}
+document.getElementById('modalBackdrop').addEventListener('click', ()=>{
+  if(state.openMenu === 'encounter' || state.pendingReveal) return;
+  closeModal();
+});
+document.querySelectorAll('.modalClose').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(state.openMenu === 'encounter' || state.pendingReveal) return;
+    closeModal();
+  });
+});
+document.getElementById('revealContinueBtn').onclick = () => {
+  const reveal = state.pendingReveal;
+  state.pendingReveal = null;
+  closeModal();
+  if(!reveal || reveal.type === 'farewell'){
+    // arc resolved — no follow-up encounter, just return to normal play
+    refreshUI();
+    return;
+  }
+  const r = Math.random();
+  const tier = r<0.46 ? 'small' : r<0.74 ? 'medium' : r<0.92 ? 'large' : 'apex';
+  const flavorType = state.securityActive ? 'security' : 'crew';
+  const flavor = pick(flavorType==='security' ? SECURITY_FLAVOR[tier] : REVEAL_FLAVOR[tier]);
+  state.pendingEncounter = { tier, reskin:true, flavorType, source:'reveal-followup', flavorText:`You spot ${flavor} again.` };
+  logMsg(state.pendingEncounter.flavorText, 'lore');
+  refreshUI();
+};
+document.getElementById('btnGuide').onclick = ()=>{ openModal('guideModal'); };
+document.getElementById('btnInventory').onclick = ()=>{ renderInventoryContent(); openModal('inventoryModal'); };
+document.getElementById('btnJournal').onclick = ()=>{ renderJournalContent(); openModal('journalModal'); };
+
+// ============================ MENU CONTENT (rendered inside actionModal) ============================
+function needLine(cost){
+  return Object.entries(cost).map(([k,v])=>{
+    const have = state.inv[k]||0;
+    return `${RESOURCE_LABELS[k]||k} ${have}/${v}${have>=v?'✓':'✗'}`;
+  }).join('  ·  ');
+}
+function renderGatherMenuHTML(){
+  const axeNote = state.owned.axe ? '4-6 logs, safer.' : '1-2 logs, slow, no axe.';
+  let html = `
+    <button class="menuItem" data-act="gatherSticks"><span class="miTitle">Gather Sticks</span><span class="miSub">Kindling &amp; shafts. Easy.</span></button>
+    <button class="menuItem" data-act="gatherTwigs"><span class="miTitle">Gather Twigs</span><span class="miSub">Fire tinder. Easy.</span></button>
+    <button class="menuItem" data-act="gatherLeaves"><span class="miTitle">Gather Leaves</span><span class="miSub">Tinder &amp; bedding. Easy.</span></button>
+    <button class="menuItem" data-act="gatherDirt"><span class="miTitle">Gather Dirt</span><span class="miSub">For a proper dirt bed over hot stones. Easy.</span></button>
+    <button class="menuItem" data-act="gatherLogs"><span class="miTitle">Gather Logs</span><span class="miSub">${axeNote}</span></button>
+    <button class="menuItem" data-act="gatherStones"><span class="miTitle">Gather Stones</span><span class="miSub">Type revealed on find: Hard / Flat / Round.</span></button>
+    <button class="menuItem" data-act="searchVine"><span class="miTitle">Search for Vine</span><span class="miSub">Binding for spear &amp; shelter.</span></button>
+    <button class="menuItem" data-act="findWater"><span class="miTitle">Find Water</span><span class="miSub">${state.owned.container? 'Fill up to carry — 3-5 units.' : 'No container: drink on the spot instead (no stockpiling).'}</span></button>
+  `;
+  if(!state.owned.container){
+    html += `<button class="menuItem" data-act="searchContainer"><span class="miTitle">Search for a Water Container</span><span class="miSub">Needed before you can carry or store water.</span></button>`;
+  }
+  html += `<button class="menuItem" data-act="forageFood"><span class="miTitle">Forage for Food</span><span class="miSub">Mushrooms, insects, nuts, honey, wild leaves. No combat.</span></button>`;
+  if(state.owned.fishHook){
+    html += `<button class="menuItem" data-act="fishAction"><span class="miTitle">Fish</span><span class="miSub">~65% catch, low risk. +1-3 Raw Meat.</span></button>`;
+  }
+  const trapAfford = canAfford(TRAP_COST);
+  html += `<button class="menuItem" data-act="setTrap" ${trapAfford?'':'disabled'}><span class="miTitle">Set Trap</span><span class="miSub">Passive catch, later — needs ${needLine(TRAP_COST)}</span></button>`;
+  if(state.traps.length > 0){
+    const readyCount = state.traps.filter(r=>r<=state.totalTicks).length;
+    html += `<button class="menuItem" data-act="checkTraps"><span class="miTitle">Check Traps</span><span class="miSub">${state.traps.length} out, ${readyCount} ready. Sprung either way, catch or not.</span></button>`;
+  }
+  return html;
+}
+function renderExploreMenuHTML(){
+  let html = `<button class="menuItem" data-act="exploreWander"><span class="miTitle">Search Unknown Areas</span><span class="miSub">Find new locations, caches, or trouble.</span></button>`;
+  Object.keys(LOCATION_INFO).forEach(key=>{
+    if(key === 'wreckage' && !state.owned.raft) return; // visible from the beach, but unreachable without a raft — shark water between here and there
+    if(state.locations[key]){
+      const info = LOCATION_INFO[key];
+      const act = 'visit_' + key;
+      html += `<button class="menuItem" data-act="${act}"><span class="miTitle">${info.label}</span><span class="miSub">${info.desc}</span></button>`;
+    }
+  });
+  return html;
+}
+function craftRowIfAvailable(id){
+  if(state.owned[id]) return null;
+  const c = CRAFTS.find(x=>x.id===id);
+  if(!c) return null;
+  const afford = canAfford(c.cost);
+  return {act:'craft_'+id, label:'Craft: '+c.label, ok:afford, sub:`${c.unlocks} — needs ${needLine(c.cost)}`};
+}
+function useRowsKindling(){
+  const inv = state.inv;
+  const rows = [{act:'sparkFireFriction', label:'Start Fire (Friction)', ok: inv.leaves>=5 && inv.twigs>=5, sub:`Needs 5 Leaves+5 Twigs. ~${(state.owned.knife||inv.sharpStone>=1)?65:50}% catch. Failure only wastes some tinder.`}];
+  if(inv.lighterCharges>0){
+    rows.push({act:'sparkFireLighter', label:'Start Fire (Lighter)', ok: inv.leaves>=5 && inv.twigs>=5, sub:`Charges left: ${inv.lighterCharges}. ~95% catch.`});
+  }
+  return rows;
+}
+function frameRowIfAvailable(){
+  const inv = state.inv;
+  if(!((inv.sticks>0||inv.logs>0) && (inv.vine+inv.driedVine)>0)) return null;
+  const tierNames = ['None','Basic','Good','Solid'];
+  return {act:'reinforceFrame', label:'Build/Improve Shelter Frame', ok:true, sub:`Current: ${tierNames[shelterTier()]}. Uses sticks/logs + up to 3 cordage on hand.`};
+}
+function hotStoneRowIfAvailable(){
+  const inv = state.inv;
+  if(!(state.shelter.beddingScore>0 && inv.hotStone>0)) return null;
+  return {act:'addHotStoneToShelter', label:'Add Hot Stone to Shelter', ok:true, sub:`x${inv.hotStone} ready. Blocks Cold for the night — but needs a dirt layer over it before you can rest (Use ▾ → Dirt).`};
+}
+function saltMeatRowIfAvailable(){
+  const inv = state.inv;
+  const unsalted = inv.meat - state.saltedMeat;
+  if(!(inv.salt>0 && unsalted>0)) return null;
+  return {act:'saltMeat', label:'Salt Meat', ok:true, sub:`Cures ${Math.min(inv.salt, unsalted)} portion(s) of raw meat — no fire needed, and it'll never spoil.`};
+}
+function useRowsFire(){
+  const inv = state.inv;
+  const rows = [];
+  ['leaves','twigs','sticks','logs'].forEach(type=>{
+    if(inv[type] > 0){
+      const amt = Math.min(FEED_DEFAULT[type], inv[type]);
+      rows.push({act:'feedFire_'+type, label:`Feed ${RESOURCE_LABELS[type]}`, ok:true, sub:`Uses ${amt} of ${inv[type]} on hand. Fire: ${fireLabel()}.`});
+    }
+  });
+  if(inv.leaves>0||inv.twigs>0||inv.sticks>0||inv.logs>0){
+    rows.push({act:'feedFireAll', label:'Feed All Fuel', ok:true, sub:`Dumps everything you're carrying in. Fire: ${fireLabel()}.`});
+  }
+  if(inv.rawWater>0) rows.push({act:'boilWater', label:'Boil Water', ok:true, sub:`x${inv.rawWater} raw on hand.`});
+  if(inv.meat>0) rows.push({act:'cookMeat', label:'Cook Meat', ok:true, sub:`x${inv.meat} raw on hand.`});
+  if(inv.flatStone>0) rows.push({act:'heatFlatStone', label:'Heat Flat Stone', ok:true, sub:'Reliable hot stone.'});
+  if(inv.roundStone>0) rows.push({act:'heatRoundStone', label:'Heat Round Stone', ok:true, sub:'Risky — trapped moisture can crack it.'});
+  if(inv.hardStone>0) rows.push({act:'heatHardStone', label:'Heat Hard Stone', ok:true, sub:"Doesn't hold heat. Wasted."});
+  if(inv.vine>0) rows.push({act:'dryVine', label:'Dry Vine', ok:true, sub:'Vine → Dried Vine/Cord.'});
+  rows.push({act:'makeSalt', label:'Make Salt (Boil Seawater)', ok:true, sub:'Free, just takes time. +1-2 Salt.'});
+  const saltRow1 = saltMeatRowIfAvailable();
+  if(saltRow1) rows.push(saltRow1);
+  const hotStoneRow1 = hotStoneRowIfAvailable();
+  if(hotStoneRow1) rows.push(hotStoneRow1);
+  return rows;
+}
+function useRowsShelter(){
+  const inv = state.inv;
+  const rows = [];
+  const frameRow = frameRowIfAvailable();
+  if(frameRow) rows.push(frameRow);
+  if(inv.leaves>0||inv.fabric>0){
+    rows.push({act:'addBedding', label:'Add Bedding', ok:true, sub:`Score: ${state.shelter.beddingScore}. Boosts Rest.`});
+  }
+  if(!state.shelter.tarp && state.owned.tarpItem && state.shelter.frameScore>0){
+    rows.push({act:'addTarpToShelter', label:'Add Tarp', ok:true, sub:'Weatherproofs the frame.'});
+  }
+  const hotStoneRow2 = hotStoneRowIfAvailable();
+  if(hotStoneRow2) rows.push(hotStoneRow2);
+  const blocked = state.shelter.hotStonesActive>0 && !state.shelter.dirtBed;
+  rows.push({act:'doRest', label:'Rest', ok:true, sub: blocked
+    ? 'BLOCKED — hot stones are bare. Pack dirt over them first (Use ▾ → Dirt → Make Dirt Bed).'
+    : 'Restore energy — more with bedding and hot stones.'});
+  return rows;
+}
+function useRowsStick(){
+  const inv = state.inv;
+  const rows = [];
+  if(inv.sticks>0 && state.fire.state!=='out'){
+    rows.push({act:'feedFire_sticks', label:'Stoke Fire', ok:true, sub:`Feed ${Math.min(FEED_DEFAULT.sticks, inv.sticks)} sticks in.`});
+  }
+  ['stoneSpear','sharpStick','axe','pickaxe','knife','boneWeapon','raft'].forEach(id=>{
+    const row = craftRowIfAvailable(id);
+    if(row) rows.push(row);
+  });
+  const frameRow2 = frameRowIfAvailable();
+  if(frameRow2) rows.push(frameRow2);
+  rows.push({act:'huntAction', label:'Hunt', ok:true, sub:"Track prey with whatever you're carrying."});
+  return rows;
+}
+function useRowsStone(){
+  const inv = state.inv;
+  const rows = [];
+  if(inv.flatStone>0 && state.fire.state!=='out'){
+    rows.push({act:'heatFlatStone', label:'Heat Flat Stone', ok:true, sub:'Reliable hot stone.'});
+  }
+  if(inv.roundStone>0 && state.fire.state!=='out'){
+    rows.push({act:'heatRoundStone', label:'Heat Round Stone', ok:true, sub:'Risky — trapped moisture can crack it.'});
+  }
+  rows.push({act:'craftSharpStone', label:'Sharpen (Knap)', ok: inv.flatStone>=2, sub:`~75% success. Both stones used either way — needs ${needLine({flatStone:2})}`});
+  if(inv.sharpStone>=1){
+    ['medium','large','apex'].forEach(tier=>{
+      if(state.carcass[tier]>0){
+        const label = tier[0].toUpperCase()+tier.slice(1);
+        rows.push({act:'dressCarcass'+label, label:`Dress Carcass (${label})`, ok:true, sub:`On hand: ${state.carcass[tier]}.`});
+      }
+    });
+  }
+  ['stoneSpear','axe','pickaxe','knife','purifier'].forEach(id=>{
+    const row = craftRowIfAvailable(id);
+    if(row) rows.push(row);
+  });
+  const hotStoneRow3 = hotStoneRowIfAvailable();
+  if(hotStoneRow3) rows.push(hotStoneRow3);
+  const saltRow2 = saltMeatRowIfAvailable();
+  if(saltRow2) rows.push(saltRow2);
+  rows.push({act:'huntAction', label:'Hunt', ok:true, sub:'Track prey — round stones throw well, sharp rock cuts closer.'});
+  return rows;
+}
+function useRowsWater(){
+  const inv = state.inv;
+  const rows = [];
+  if(inv.rawWater>0) rows.push({act:'drinkRaw', label:'Drink Raw Water', ok:true, sub:`x${inv.rawWater} — contamination risk.`});
+  if(state.fire.state!=='out' && inv.rawWater>0) rows.push({act:'boilWater', label:'Boil Water', ok:true, sub:'Turns raw into purified.'});
+  if(inv.safeWater>0) rows.push({act:'drinkSafe', label:'Drink Purified Water', ok:true, sub:`x${inv.safeWater} — safe.`});
+  if(state.fire.state!=='out'){
+    rows.push({act:'makeSalt', label:'Make Salt (Boil Seawater)', ok:true, sub:'Free, just takes time. +1-2 Salt.'});
+  }
+  return rows;
+}
+function useRowsKnife(){
+  const rows = [];
+  ['medium','large','apex'].forEach(tier=>{
+    if(state.carcass[tier]>0){
+      const label = tier[0].toUpperCase()+tier.slice(1);
+      rows.push({act:'dressCarcass'+label, label:`Dress Carcass (${label})`, ok:true, sub:`On hand: ${state.carcass[tier]}.`});
+    }
+  });
+  const sharpStickRow = craftRowIfAvailable('sharpStick');
+  if(sharpStickRow) rows.push(sharpStickRow);
+  const saltRow3 = saltMeatRowIfAvailable();
+  if(saltRow3) rows.push(saltRow3);
+  rows.push({act:'huntAction', label:'Hunt', ok:true, sub:'Track prey with the knife.'});
+  return rows;
+}
+function useRowsSpear(){
+  return [{act:'huntAction', label:'Hunt', ok:true, sub:'Track prey with the spear — your best all-around option.'}];
+}
+function useRowsAxe(){
+  const rows = [{act:'gatherLogs', label:'Chop Wood', ok:true, sub:'Better, safer logging with an axe.'}];
+  const frameRow3 = frameRowIfAvailable();
+  if(frameRow3) rows.push(frameRow3);
+  const raftRow = craftRowIfAvailable('raft');
+  if(raftRow) rows.push(raftRow);
+  return rows;
+}
+function useRowsPickaxe(){
+  return [{act:'gatherStones', label:'Mine Stone', ok:true, sub:'Type revealed on find: Hard / Flat / Round.'}];
+}
+function useRowsVine(){
+  const inv = state.inv;
+  const rows = [];
+  if(inv.vine>0) rows.push({act:'dryVine', label:'Dry Vine', ok:true, sub:'Vine → Dried Vine/Cord.'});
+  if(inv.sinew>0) rows.push({act:'twistSinew', label:'Twist Sinew into Cord', ok:true, sub:'Sinew → Dried Vine/Cord. No fire needed.'});
+  ['stoneSpear','clothing','fishHook','raft'].forEach(id=>{
+    const row = craftRowIfAvailable(id);
+    if(row) rows.push(row);
+  });
+  if((inv.sticks>0||inv.logs>0) && (inv.vine+inv.driedVine)>0){
+    rows.push({act:'reinforceFrame', label:'Bind Shelter Frame', ok:true, sub:'Reinforce using sticks/logs + cordage on hand.'});
+  }
+  return rows;
+}
+function useRowsMedical(){
+  const inv = state.inv;
+  const rows = [];
+  if(inv.herbs>0 && (state.hp<state.maxHp || state.sick>0)){
+    rows.push({act:'useHerb', label:'Use Herbal Remedy', ok:true, sub:`x${inv.herbs} — heal 20 HP, eases sickness.`});
+  }
+  if(inv.firstAidKit>0 && (state.hp<state.maxHp || state.sick>0)){
+    rows.push({act:'useFirstAidKit', label:'Use First-Aid Kit', ok:true, sub:`x${inv.firstAidKit} — heal 45 HP, cures sickness.`});
+  }
+  if(inv.phoneBattery>0){
+    rows.push({act:'checkPhone', label:'Check Phone', ok:true, sub:`Charges left: ${inv.phoneBattery}.`});
+  }
+  return rows;
+}
+function useRowsDirt(){
+  const inv = state.inv;
+  const rows = [];
+  if(state.shelter.hotStonesActive>0 && !state.shelter.dirtBed && inv.dirt>=5){
+    rows.push({act:'makeDirtBed', label:'Make Dirt Bed', ok:true, sub:'Uses 5 Dirt. Packs a safe layer over the hot stones — required before you can Rest.'});
+  }
+  return rows;
+}
+const USE_CATEGORIES = [
+  { key:'kindling', label:'Kindling', desc:'Start a fire from nothing.', show: ()=> state.fire.state==='out', rows: useRowsKindling },
+  { key:'fire',     label:'Fire',     desc:'Everything that needs it lit.', show: ()=> state.fire.state!=='out', rows: useRowsFire },
+  { key:'shelter',  label:'Shelter',  desc:'Build up, rest easy.', show: ()=> true, rows: useRowsShelter },
+  { key:'dirt',     label:'Dirt',     desc:'Pack a bed over hot stones.', show: ()=> true, rows: useRowsDirt },
+  { key:'medical',  label:'Medical & Misc', desc:'Herbs, kits, the phone.', show: ()=> true, rows: useRowsMedical },
+  { key:'spear',    label:'Spear',    desc:'Your best hunting option.', show: ()=> state.owned.stoneSpear, rows: useRowsSpear },
+  { key:'knife',    label:'Knife',    desc:'Dressing, sharpening, hunting.', show: ()=> state.owned.knife, rows: useRowsKnife },
+  { key:'pickaxe',  label:'Pickaxe',  desc:'Better stone work.', show: ()=> state.owned.pickaxe, rows: useRowsPickaxe },
+  { key:'axe',      label:'Axe',      desc:'Better logging.', show: ()=> state.owned.axe, rows: useRowsAxe },
+  { key:'stone',    label:'Stone',    desc:'Heat it, sharpen it, craft with it.', show: ()=> true, rows: useRowsStone },
+  { key:'stick',    label:'Stick',    desc:'Fuel, tools, weapons.', show: ()=> true, rows: useRowsStick },
+  { key:'water',    label:'Water',    desc:'Drink it, purify it.', show: ()=> true, rows: useRowsWater },
+  { key:'vine',     label:'Vine & Sinew', desc:'Cordage for binding.', show: ()=> true, rows: useRowsVine },
+];
+function renderUseCategoriesHTML(){
+  const visible = USE_CATEGORIES.filter(c => c.show() && c.rows().length > 0);
+  if(visible.length===0) return `<div class="miSub" style="padding:8px;">Nothing usable right now.</div>`;
+  return visible.map(c=>`<button class="menuItem" data-act="useCat" data-cat="${c.key}"><span class="miTitle">${c.label}</span><span class="miSub">${c.desc}</span></button>`).join('');
+}
+function renderUseCategoryDetailHTML(key){
+  const cat = USE_CATEGORIES.find(c=>c.key===key);
+  let html = `<button class="menuItem" data-act="useBack" style="text-align:center;"><span class="miTitle">\u2190 Back</span></button>`;
+  if(!cat) return html;
+  const rows = cat.rows();
+  if(rows.length===0) html += `<div class="miSub" style="padding:8px;">Nothing to do here right now.</div>`;
+  html += rows.map(r=>`<button class="menuItem" data-act="${r.act}" ${r.ok?'':'disabled'}><span class="miTitle">${r.label}</span><span class="miSub">${r.sub}</span></button>`).join('');
+  return html;
+}
+function renderConsumeMenuHTML(){
+  const inv = state.inv;
+  const rows = [
+    {act:'eatWildSafe', label:'Eat Foraged Food (Safe)', ok:inv.wildFoodSafe>0, sub:`x${inv.wildFoodSafe}`},
+    {act:'eatWildUncertain', label:'Eat Foraged Food (Uncertain)', ok:inv.wildFoodUncertain>0, sub:`x${inv.wildFoodUncertain} — poison risk`},
+    {act:'eatWildRisky', label:'Eat Foraged Food (Risky)', ok:inv.wildFoodRisky>0, sub:`x${inv.wildFoodRisky} — high poison risk`},
+    {act:'eatMeatRaw', label:'Eat Raw Meat', ok:inv.meat>0, sub:`x${inv.meat} — poison risk`},
+    {act:'eatMeatCooked', label:'Eat Cooked Meat', ok:inv.cookedMeat>0, sub:`x${inv.cookedMeat} — safe`},
+    {act:'drinkRaw', label:'Drink Raw Water', ok:inv.rawWater>0, sub:`x${inv.rawWater} — contamination risk`},
+    {act:'drinkSafe', label:'Drink Purified Water', ok:inv.safeWater>0, sub:`x${inv.safeWater} — safe`},
+  ];
+  return rows.map(r=>`<button class="menuItem" data-act="${r.act}" ${r.ok?'':'disabled'}><span class="miTitle">${r.label}</span><span class="miSub">${r.sub}</span></button>`).join('');
+}
+function renderEncounterHTML(){
+  const enc = state.pendingEncounter;
+  const available = WEAPONS.filter(w=>w.require(state));
+  let html = `<div class="encounterFlavor ${enc.reskin?'lore':''}">${enc.flavorText}</div>`;
+  html += available.map(w=>`<button class="menuItem" data-act="engageWeapon" data-weapon="${w.key}">
+    <span class="miTitle">${w.label}${w.key==='pistol'?` (${state.inv.ammo} rounds)`:''}</span>
+    <span class="miSub">success ${w.successMod>=0?'+':''}${Math.round(w.successMod*100)}%, dodge ${w.dodgeMod>=0?'+':''}${Math.round(w.dodgeMod*100)}%</span>
+  </button>`).join('');
+  if(!enc.isHostReveal){
+    html += `<button class="menuItem" data-act="leaveEncounter" style="text-align:center;"><span class="miTitle">Let it go</span></button>`;
+  }
+  return html;
+}
+
+function openActionMenu(name){
+  state.openMenu = name;
+  if(name === 'use') state.useCategory = null;
+  renderActionModalContent();
+  openModal('actionModal');
+}
+function renderActionModalContent(){
+  const titleEl = document.getElementById('actionModalTitle');
+  const bodyEl = document.getElementById('actionModalBody');
+  const closeBtn = document.getElementById('actionModalCloseBtn');
+  const useTitle = state.useCategory ? (USE_CATEGORIES.find(c=>c.key===state.useCategory)||{}).label : 'USE / CRAFT';
+  const titles = {explore:'EXPLORE', gather:'GATHER', use: useTitle, consume:'CONSUME', encounter:'SOMETHING\u2019S THERE'};
+  titleEl.textContent = titles[state.openMenu] || 'MENU';
+  if(state.openMenu==='explore') bodyEl.innerHTML = renderExploreMenuHTML();
+  else if(state.openMenu==='gather') bodyEl.innerHTML = renderGatherMenuHTML();
+  else if(state.openMenu==='use') bodyEl.innerHTML = state.useCategory ? renderUseCategoryDetailHTML(state.useCategory) : renderUseCategoriesHTML();
+  else if(state.openMenu==='consume') bodyEl.innerHTML = renderConsumeMenuHTML();
+  else if(state.openMenu==='encounter') bodyEl.innerHTML = renderEncounterHTML();
+  closeBtn.style.display = (state.openMenu==='encounter') ? 'none' : 'inline-block';
+}
+document.getElementById('actionModalBody').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.menuItem');
+  if(!btn || btn.disabled) return;
+  const act = btn.dataset.act;
+  if(act === 'engageWeapon'){ resolveEncounterChoice(btn.dataset.weapon); state.openMenu=null; closeModal(); refreshUI(); return; }
+  if(act === 'leaveEncounter'){ resolveEncounterChoice('leave'); state.openMenu=null; closeModal(); refreshUI(); return; }
+  if(act === 'useCat'){ state.useCategory = btn.dataset.cat; renderActionModalContent(); return; }
+  if(act === 'useBack'){ state.useCategory = null; renderActionModalContent(); return; }
+  if(act && act.indexOf('craft_') === 0){
+    craftItem(act.slice(6));
+    state.openMenu = null; state.useCategory = null;
+    closeModal();
+    refreshUI();
+    return;
+  }
+  const handlers = {
+    exploreWander, visit_wreckage: visitWreckage, visit_pond: visitPond, visit_stream: visitStream, visit_river: visitRiver,
+    visit_mushroomPatch: visitMushroomPatch, visit_field: visitField, visit_treeGrove: visitTreeGrove, visit_supplyShack: visitSupplyShack,
+    gatherSticks, gatherTwigs, gatherLeaves, gatherDirt, gatherLogs, gatherStones, searchVine, searchContainer, findWater, forageFood, huntAction, fishAction, setTrap, checkTraps,
+    craftSharpStone, reinforceFrame, addBedding, addTarpToShelter, doRest,
+    sparkFireFriction, sparkFireLighter,
+    feedFire_leaves: ()=>feedFireAmount('leaves', FEED_DEFAULT.leaves),
+    feedFire_twigs: ()=>feedFireAmount('twigs', FEED_DEFAULT.twigs),
+    feedFire_sticks: ()=>feedFireAmount('sticks', FEED_DEFAULT.sticks),
+    feedFire_logs: ()=>feedFireAmount('logs', FEED_DEFAULT.logs),
+    feedFireAll,
+    heatFlatStone: ()=>heatStone('flat'), heatRoundStone: ()=>heatStone('round'), heatHardStone: ()=>heatStone('hard'),
+    dryVine, twistSinew, cookMeat, boilWater, makeSalt, saltMeat,
+    dressCarcassMedium: ()=>dressCarcass('medium'), dressCarcassLarge: ()=>dressCarcass('large'), dressCarcassApex: ()=>dressCarcass('apex'),
+    addHotStoneToShelter, makeDirtBed, useHerb, useFirstAidKit, checkPhone,
+    eatWildSafe: ()=>eatWild('Safe'), eatWildUncertain: ()=>eatWild('Uncertain'), eatWildRisky: ()=>eatWild('Risky'),
+    eatMeatRaw, eatMeatCooked, drinkRaw, drinkSafe,
+  };
+  if(handlers[act]){
+    handlers[act]();
+    state.openMenu = null;
+    state.useCategory = null;
+    closeModal();
+    refreshUI();
+  }
+});
+
+document.getElementById('btnRest').onclick = ()=>{ doRest(); refreshUI(); };
+document.getElementById('btnHunt').onclick = ()=>{ huntAction(); };
+document.querySelectorAll('#menuRow button[data-menu]').forEach(b=>{
+  b.onclick = ()=>{ openActionMenu(b.dataset.menu); };
+});
+document.getElementById('btnRestart').onclick = initGame;
+
+// ============================ INVENTORY / JOURNAL / GUIDE CONTENT ============================
+function renderInventoryContent(){
+  const inv = state.inv;
+  document.getElementById('invList').innerHTML = `<div class="invGrid">${
+    Object.keys(RESOURCE_LABELS).map(k=>`<div class="invRow"><span>${RESOURCE_LABELS[k]}</span><span>${inv[k]}</span></div>`).join('')
+  }</div>
+  <div style="margin-top:8px; color:var(--green-dim);">Carcasses: Med ${state.carcass.medium} / Lg ${state.carcass.large} / Apex ${state.carcass.apex}</div>
+  <div style="color:var(--green-dim);">Shelter: frame ${state.shelter.frameScore}, bedding ${state.shelter.beddingScore}, tarp ${state.shelter.tarp?'yes':'no'}, hot stones ${state.shelter.hotStonesActive}</div>
+  <div style="margin-top:5px; color:var(--green-dim);">Gear: ${
+    Object.entries(state.owned).filter(([k,v])=>v===true).map(([k])=>k).join(', ') || '—'
+  }</div>`;
+}
+function renderJournalContent(){
+  document.getElementById('journalCount').textContent = state.journal.length;
+  const jEl = document.getElementById('journalList');
+  jEl.innerHTML = state.journal.length===0
+    ? '<div class="journalEntry" style="color:var(--green-dim);font-style:normal;">Nothing noted yet.</div>'
+    : state.journal.map(e=>`<div class="journalEntry">${e}</div>`).join('');
+}
+function renderGuideContent(){
+  document.getElementById('guideList').innerHTML = `
+    <div style="margin-bottom:5px;"><b style="color:var(--amber);">Priorities:</b></div>
+    <div class="invRow" style="display:block;">1. Gather ▾ → Water Container (or drink on the spot without one)</div>
+    <div class="invRow" style="display:block;">2. Gather Leaves+Twigs (5 each) → Use ▾ → Kindling → Start Fire</div>
+    <div class="invRow" style="display:block;">3. Forage food (mushrooms/insects/nuts, no combat), gather Stones</div>
+    <div class="invRow" style="display:block;">4. Use ▾ → Stone → Sharpen (2 Flat) → your first weapon</div>
+    <div class="invRow" style="display:block;">5. Hunt button → real prey — pick a weapon you own, better = safer</div>
+    <div class="invRow" style="display:block;">6. Use ▾ → Shelter → Reinforce Frame before nightfall</div>
+    <div class="invRow" style="display:block;">7. Carcass ≠ meat — dress it (Use ▾ → Knife) for Meat/Sinew/Skin/Bone</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">Use menu:</b></div>
+    <div class="invRow" style="display:block;">Organized by component, not action — open Use ▾ and pick whatever you're holding (Stick, Stone, Water, Knife, Spear, Axe, Pickaxe, Vine &amp; Sinew) to see what you can do with it. Kindling only shows when there's no fire at all; Fire only shows once one's lit or embering. Craft options appear wherever their ingredients do — nothing shows unless you can actually do it right now.</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">Explore:</b></div>
+    <div class="invRow" style="display:block;">Search Unknown Areas can turn up named locations (pond, stream, river, field, tree grove, mushroom patch) — once found, revisit them anytime, each biased toward different resources. Never truly empty-handed — even a quiet trip brings back a little something. A Supply Shack shows up once you're getting close to the truth — it has a pistol, but you'll need to keep returning for ammo.</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">The Wreckage:</b></div>
+    <div class="invRow" style="display:block;">Visible from the beach, out of reach until you build a Raft (Use ▾ → Stick/Axe/Vine — Logs, Sticks, Dried Vine/Cord). The crossing is never fully safe — sharks live in that water, every trip, raft or not.</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">Traps:</b></div>
+    <div class="invRow" style="display:block;">Gather ▾ → Set Trap. Costs real material and takes time to pay off — can't check it right away. Set several at once if you can afford it. Each one is spent the moment you check it, catch or not.</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">Armed against danger:</b></div>
+    <div class="invRow" style="display:block;">Carrying a real weapon when a wolf, bear, snake, scavenger, or shark turns on you doesn't just help you dodge — there's a real chance you turn it into a kill instead, same reward as hunting it outright.</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">Byproducts:</b></div>
+    <div class="invRow" style="display:block;">Sinew→cord · Skin→Clothing (warmth+sanity) · Long Bone→weapon · Short Bone→Fish Hook (unlocks Fishing)</div>
+    <div style="margin:8px 0 5px;"><b style="color:var(--amber);">Meters:</b></div>
+    <div class="invRow" style="display:block;"><b>Warmth</b> drains always (faster at night) — fire/clothing/shelter slow it; zero = hypothermia damage.</div>
+    <div class="invRow" style="display:block;"><b>Sanity</b> drains from isolation/darkness/big hits — firelight and rest restore it.</div>
+    <div class="invRow" style="display:block;">Poisoning now causes lingering <b>Sickness</b> — herbs ease it, First-Aid clears it.</div>
+    <div class="invRow" style="display:block;">Raw meat still spoils past a point unless it's <b>Salted/Cured</b> — Make Salt (Use ▾ → Fire/Water, needs a fire) then Salt Meat (Use ▾ → Stone/Knife, no fire needed) on your raw stock. Cured meat keeps forever; cooked meat still has its own shorter shelf life.</div>
+  `;
+}
+
+// ============================ REFRESH UI ============================
+function refreshUI(){
+  document.getElementById('daytime').textContent = `DAY ${state.day} — ${TIMES[state.timeIdx]}`;
+  const setStat = (id,val,barId)=>{
+    document.getElementById(id).textContent = Math.round(val);
+    document.getElementById(barId).style.width = clamp(val,0,100)+'%';
+  };
+  setStat('hpVal', state.hp, 'hpBar');
+  setStat('hungerVal', state.hunger, 'hungerBar');
+  setStat('thirstVal', state.thirst, 'thirstBar');
+  setStat('energyVal', state.energy, 'energyBar');
+  setStat('warmthVal', state.warmth, 'warmthBar');
+  setStat('sanityVal', state.sanity, 'sanityBar');
+  document.getElementById('hpBar').style.background = state.hp < 30 ? '#ff4444' : '#39ff6a';
+  document.getElementById('hungerBar').style.background = state.hunger < 25 ? '#ff4444' : '#ffb000';
+  document.getElementById('thirstBar').style.background = state.thirst < 25 ? '#ff4444' : '#5ad1ff';
+  document.getElementById('warmthBar').style.background = state.warmth < 25 ? '#ff4444' : '#ff8a3d';
+  document.getElementById('sanityBar').style.background = state.sanity < 25 ? '#ff4444' : '#c084fc';
+
+  const brightness = state.fire.state==='lit' ? 0.90 + 0.10*(state.fire.meter/100) : state.fire.state==='embers' ? 0.70 : 0.52;
+  document.getElementById('frame').style.filter = `brightness(${brightness.toFixed(2)})`;
+
+  document.getElementById('advisor').textContent = advisorText();
+
+  renderInventoryContent();
+  renderJournalContent();
+
+  if(state.gameOver){
+    document.getElementById('menuRow').style.display = 'none';
+    document.getElementById('restartWrap').style.display = 'block';
+    if(state.openMenu){ state.openMenu = null; }
+    closeModal();
+    return;
+  }
+  document.getElementById('menuRow').style.display = 'flex';
+  document.getElementById('restartWrap').style.display = 'none';
+
+  if(state.pendingReveal){
+    document.getElementById('revealText').textContent = state.pendingReveal.type === 'farewell'
+      ? FAREWELL_MESSAGE
+      : (WARNING_SEQUENCE[state.pendingReveal.index] || '');
+    openModal('revealModal');
+  } else if(state.pendingEncounter){
+    state.openMenu = 'encounter';
+    renderActionModalContent();
+    openModal('actionModal');
+  } else if(state.openMenu && ['explore','gather','use','consume'].includes(state.openMenu)){
+    renderActionModalContent();
+  }
+}
+
+// ============================ INIT ============================
+function initGame(){
+  state = freshState();
+  logEl.innerHTML = '';
+  logMsg("SYSTEM BOOT... ISLANDER SURVIVAL PROTOCOL ENGAGED.", 'sys');
+  logMsg("You wake on a beach with a headache. Wreckage sinks offshore.", 'info');
+  logMsg("First problem: nothing to hold water in. Second: no fire yet. Everything else can wait a little.", 'sys');
+  renderGuideContent();
+  closeModal();
+  refreshUI();
+}
+initGame();
+const FIRE_BADGE_FRAMES = ['(*)', '(o)', '(*)', '(O)'];
+let fireBadgeFrameIdx = 0;
+function tickFireBadge(){
+  const badge = document.getElementById('fireBadge');
+  if(!badge) return;
+  if(state.fire.state==='lit'){
+    fireBadgeFrameIdx = (fireBadgeFrameIdx+1) % FIRE_BADGE_FRAMES.length;
+    badge.textContent = `${FIRE_BADGE_FRAMES[fireBadgeFrameIdx]} ${fireLabel()}`;
+    badge.style.color = 'var(--fire)';
+  } else if(state.fire.state==='embers'){
+    badge.textContent = `(~) ${fireLabel()}`;
+    badge.style.color = '#c07030';
+  } else {
+    badge.textContent = `( ) ${fireLabel()}`;
+    badge.style.color = 'var(--green-dim)';
+  }
+}
+setInterval(tickFireBadge, 550);
+tickFireBadge();
+function setVH(){
+  document.documentElement.style.setProperty('--vh', (window.innerHeight*0.01)+'px');
+}
+setVH();
+window.addEventListener('resize', setVH);
+window.addEventListener('orientationchange', setVH);
+if(window.visualViewport){ window.visualViewport.addEventListener('resize', setVH); }
+</script>
+</body>
+</html>
