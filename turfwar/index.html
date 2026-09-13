@@ -3488,6 +3488,11 @@ const locationSounds = {
 // sound gets a small pool of Audio elements so rapid fire (e.g. SMG burst)
 // reuses idle elements instead of allocating a new Audio() every shot.
 const SFX_PATH = 'sounds/';
+// One-shot SFX (everything routed through playSfx) live in a folder shared
+// with other game projects, one level up from this game's own folder.
+// Music/ambient loops (territory tracks, crashclub/goblins/respite, drone,
+// steps, rain) stay on SFX_PATH since they're loaded directly, not via playSfx.
+const SHARED_SFX_PATH = '../sharedsounds/';
 const SFX_POOL_SIZE = 4;
 const sfxPools = {};
 
@@ -3498,9 +3503,9 @@ function playSfx(filename, opts) {
     if (!sfxPools[filename]) {
         sfxPools[filename] = [];
         for (let i = 0; i < SFX_POOL_SIZE; i++) {
-            const a = new Audio(SFX_PATH + filename);
+            const a = new Audio(SHARED_SFX_PATH + filename);
             a.addEventListener('error', function() {
-                console.warn('[sfx] failed to load:', SFX_PATH + filename, a.error);
+                console.warn('[sfx] failed to load:', SHARED_SFX_PATH + filename, a.error);
             });
             sfxPools[filename].push(a);
         }
@@ -3516,7 +3521,7 @@ function playSfx(filename, opts) {
     const playPromise = el.play();
     if (playPromise !== undefined) {
         playPromise.catch((err) => {
-            console.warn('[sfx] play() rejected:', SFX_PATH + filename, err && err.name);
+            console.warn('[sfx] play() rejected:', SHARED_SFX_PATH + filename, err && err.name);
         });
     }
 }
