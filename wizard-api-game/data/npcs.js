@@ -25,13 +25,13 @@ module.exports = {
     location: 'town_square',
     getLine: cyclingLines(
       [
-        "Dough in the air and it's not coming down. I've been mid-toss " +
-          "for... well. I don't actually know how long, do I.",
+        "I've been standing in my doorway for so long, " +
+          "I don't remember if I was coming or going.",
         "You're moving. Nobody moves. I'd ask how, but I have a feeling " +
           "I already know the answer, and I don't like it.",
         'Go on, wizard. Someone in this town ought to be doing something.'
       ],
-      "The dough's still up there. So am I, near enough."
+      "Find a way to thaw us out!"
     )
   },
 
@@ -39,13 +39,12 @@ module.exports = {
     location: 'town_square',
     getLine: cyclingLines(
       [
-        "I was jumping the puddle. I'm still jumping the puddle. Is " +
-          "that funny? I can't tell if that's funny.",
+        "I can't jump, no matter how hard I try.",
         "Everyone says you're the wizard. You don't look like you " +
           'remember being the wizard.',
-        'If you fix this, will I get to land?'
+        'If you fix this, will I get to play again?'
       ],
-      'Still up here.'
+      'Still stuck.'
     )
   },
 
@@ -53,14 +52,9 @@ module.exports = {
     location: 'town_square',
     getLine: cyclingLines(
       [
-        "Sit with me a while, dear — oh. You can't, can you. None of " +
-          "us can do anything but talk, and even that's more than most " +
-          'nights afford.',
-        "Whatever's holding this town, it isn't clumsy. Clumsy things " +
-          "break. This hasn't broken. It's just... paused us, like a " +
-          'breath held on purpose.',
-        "You'll want the river before you want anything else. That " +
-          "much I remember, even if I can't remember why."
+        "Sit with me a while, dear. I can't stand up.',
+        "This town has been bewitched! No one can move their feet."
+        "Go the the river. The river must flow again."
       ],
       "Go on, dear. I'll be here. I'm not going anywhere — quite " +
         'literally, at the moment.'
@@ -90,7 +84,7 @@ module.exports = {
         return "That's it. That's the one. Go on, then — the river won't fill itself.";
       }
       return (
-        "There we are. Get in — I'll get you under that wall. " +
+        "There we are. Get in — I'll float you down under that wall. " +
         "Whatever's waiting for you on the other side, I hope you're " +
         'ready for it.'
       );
@@ -139,9 +133,8 @@ module.exports = {
           'Fire? Against him? He\'s turned worse than fire back on ' +
           'people before now.\n\n' +
           "Funny thing about Grip — man's never had a lick of " +
-          "balance. Always did overreach. Don't know why that's the " +
-          "thing I remember about him and not his name before yours, " +
-          'but there it is.'
+          "balance. Great powerful wizard, falls over with a nudge." +
+          "He's unstable in more ways than one."
         );
       }
       return 'The void has gone quiet. It has nothing left to say either.';
