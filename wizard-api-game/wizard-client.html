@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wizard API Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
+  *, *::before, *::after { box-sizing: inherit; }
+  body { margin: 0; font-family: 'Source Sans 3', sans-serif; background: #1F2937; color: #E7E2D8; overflow-x: hidden; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
+  h1, h2, h3 { font-family: 'Source Sans 3', sans-serif; margin: 0; }
+  a { color: #E3A857; }
+  button { font-family: inherit; cursor: pointer; }
+  .card { background: #262F3F; border: 1px solid #384156; border-radius: 12px; padding: clamp(16px, 4vw, 24px); margin-bottom: 20px; }
+  .btn { background: #B45309; color: #FAF8F5; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px 4px 0; }
+  .btn:hover { background: #8A3E09; }
+  .btn:disabled { background: #4B5563; cursor: not-allowed; }
+  .btn-outline { background: transparent; color: #E7E2D8; border: 1px solid #4B5563; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px 4px 0; }
+  .btn-small { padding: 6px 12px; font-size: 13px; }
+  input[type=text] { font-family: inherit; background: #1B222E; border: 1px solid #4B5563; color: #E7E2D8; padding: 10px 12px; border-radius: 8px; font-size: 14px; width: 100%; margin-bottom: 8px; }
+  label { font-size: 13px; color: #A8A29E; display: block; margin-bottom: 4px; }
+  .muted { color: #A8A29E; font-size: 14px; }
+  .msg { padding: 10px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 12px; }
+  .msg-error { background: #4A1F24; color: #F3B4B4; }
+  .msg-info { background: #1F3A3A; color: #A6E3D4; }
+  .spell-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #384156; flex-wrap: wrap; }
+  .spell-row:last-child { border-bottom: none; }
+  .spell-name { font-weight: 700; }
+  .spell-desc { font-size: 13px; color: #A8A29E; margin-top: 2px; }
+  .progress-bar { background: #1B222E; border-radius: 6px; height: 8px; overflow: hidden; margin-top: 6px; width: 100%; }
+  .progress-fill { background: #E3A857; height: 100%; transition: width 0.4s ease; }
+  .exit-list, .npc-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .log-entry { font-size: 13px; color: #A8A29E; padding: 4px 0; border-bottom: 1px solid #2E3648; }
+  .kicker { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #E3A857; margin-bottom: 6px; }
+  header.top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .stat-pill { background: #1B222E; border-radius: 999px; padding: 6px 14px; font-size: 13px; }
+  #screen-setup, #screen-game { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1 style="font-size: clamp(22px, 4vw, 28px);">Wizard API Game</h1>
+    <span class="muted">A text RPG played entirely through HTTP requests</span>
+  </header>
+
+  <!-- SETUP SCREEN -->
+  <div id="screen-setup">
+    <div class="card">
+      <div class="kicker">Server</div>
+      <label for="server-url">Server URL</label>
+      <input type="text" id="server-url" placeholder="https://your-app.onrender.com">
+      <div class="muted" style="margin-bottom: 10px;">If this is hosted on a free Render instance, the first request after idle time can take several seconds while it wakes up.</div>
+      <button class="btn" id="btn-check-server">Connect</button>
+      <div id="server-status"></div>
+    </div>
+
+    <div class="card" id="wizard-setup-card" style="display: none;">
+      <div class="kicker">Your Wizard</div>
+      <div id="existing-key-block">
+        <label for="existing-key">Have an API key already?</label>
+        <input type="text" id="existing-key" placeholder="sk_wiz_...">
+        <button class="btn-outline" id="btn-resume">Resume with this key</button>
+      </div>
+      <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
+      <label for="new-name">Or create a new wizard</label>
+      <input type="text" id="new-name" placeholder="Your wizard's name" maxlength="32">
+      <button class="btn" id="btn-create">Create new wizard</button>
+      <div class="muted" style="margin-top: 8px;">There is no password recovery. If you lose this key, that wizard is gone for good — the same way it is in the real API.</div>
+      <div id="setup-msg"></div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <div class="kicker" id="wizard-name-display">Wizard</div>
+          <span class="stat-pill" id="spell-count-pill">0 / 6 spells known</span>
+        </div>
+        <div>
+          <button class="btn-outline btn-small" id="btn-copy-key">Copy API key</button>
+          <button class="btn-outline btn-small" id="btn-log-toggle">Event log</button>
+          <button class="btn-outline btn-small" id="btn-logout">Switch wizard</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="global-msg"></div>
+
+    <div class="card" id="location-card">
+      <div class="kicker" id="location-name">Location</div>
+      <p id="location-desc" class="muted"></p>
+      <div class="exit-list" id="exit-list"></div>
+    </div>
+
+    <div class="card" id="npc-card">
+      <div class="kicker">Speak with</div>
+      <div class="npc-list" id="npc-list"></div>
+      <div id="npc-dialogue" style="margin-top: 12px;"></div>
+    </div>
+
+    <div class="card" id="spells-card">
+      <div class="kicker">Spells</div>
+      <div id="spell-list"></div>
+    </div>
+
+    <div class="card" id="log-card" style="display: none;">
+      <div class="kicker">Event Log</div>
+      <div id="log-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const NPC_NAMES = {
+    baker: 'Baker', child: 'Child', old_woman: 'Old Woman',
+    fisherman: 'Fisherman', villager: 'City Villager',
+    castle_echo: 'Echo', grip: 'Grip'
+  };
+  const LOCATION_NPCS = {
+    town_square: ['baker', 'child', 'old_woman'],
+    riverbank: ['fisherman'],
+    city: ['villager'],
+    castle_base: [],
+    sky_castle: ['castle_echo', 'grip']
+  };
+
+  let serverUrl = localStorage.getItem('wizardServerUrl') || '';
+  let apiKey = localStorage.getItem('wizardApiKey') || '';
+  let wizardName = localStorage.getItem('wizardName') || '';
+  let currentLocationId = null;
+  let studyPollTimer = null;
+  let studyEtag = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  function showMsg(el, text, kind) {
+    el.innerHTML = text ? `<div class="msg msg-${kind || 'error'}">${text}</div>` : '';
+  }
+
+  async function api(path, method, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+    if (studyEtag && path.endsWith('/study') && method === 'GET') {
+      headers['If-None-Match'] = studyEtag;
+    }
+    let res;
+    try {
+      res = await fetch(serverUrl.replace(/\/$/, '') + path, {
+        method: method || 'GET',
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+    } catch (e) {
+      return { ok: false, networkError: true, status: 0, data: null, res: null };
+    }
+    let data = null;
+    if (res.status !== 304 && res.status !== 204) {
+      try { data = await res.json(); } catch (e) { data = null; }
+    }
+    return { ok: res.ok, status: res.status, data, res };
+  }
+
+  // --- Setup screen ---
+  $('server-url').value = serverUrl;
+
+  $('btn-check-server').addEventListener('click', async () => {
+    serverUrl = $('server-url').value.trim();
+    if (!serverUrl) return;
+    localStorage.setItem('wizardServerUrl', serverUrl);
+    showMsg($('server-status'), 'Connecting — this can take a few seconds if the server was asleep…', 'info');
+    const result = await api('/', 'GET');
+    if (result.networkError) {
+      showMsg($('server-status'), 'Could not reach that server. Check the URL and try again.', 'error');
+      return;
+    }
+    showMsg($('server-status'), 'Connected.', 'info');
+    $('wizard-setup-card').style.display = 'block';
+  });
+
+  $('btn-create').addEventListener('click', async () => {
+    const name = $('new-name').value.trim();
+    if (name.length < 2 || name.length > 32) {
+      showMsg($('setup-msg'), 'Name must be 2–32 characters.', 'error');
+      return;
+    }
+    const result = await api('/wizard', 'POST', { name });
+    if (!result.ok) {
+      showMsg($('setup-msg'), (result.data && result.data.error) || 'Could not create wizard.', 'error');
+      return;
+    }
+    apiKey = result.data.api_key;
+    wizardName = result.data.name;
+    localStorage.setItem('wizardApiKey', apiKey);
+    localStorage.setItem('wizardName', wizardName);
+    enterGame();
+  });
+
+  $('btn-resume').addEventListener('click', async () => {
+    const key = $('existing-key').value.trim();
+    if (!key) return;
+    apiKey = key;
+    const result = await api('/wizard', 'GET');
+    if (!result.ok) {
+      showMsg($('setup-msg'), 'That key was not accepted.', 'error');
+      apiKey = '';
+      return;
+    }
+    wizardName = result.data.name;
+    localStorage.setItem('wizardApiKey', apiKey);
+    localStorage.setItem('wizardName', wizardName);
+    enterGame();
+  });
+
+  $('btn-logout').addEventListener('click', () => {
+    localStorage.removeItem('wizardApiKey');
+    localStorage.removeItem('wizardName');
+    location.reload();
+  });
+
+  $('btn-copy-key').addEventListener('click', () => {
+    navigator.clipboard.writeText(apiKey).then(() => {
+      showMsg($('global-msg'), 'API key copied. Save it somewhere safe — there is no recovery.', 'info');
+    }).catch(() => {});
+  });
+
+  $('btn-log-toggle').addEventListener('click', async () => {
+    const card = $('log-card');
+    const showing = card.style.display !== 'none';
+    card.style.display = showing ? 'none' : 'block';
+    if (!showing) await refreshLog();
+  });
+
+  // --- Game screen ---
+  function enterGame() {
+    $('screen-setup').style.display = 'none';
+    $('screen-game').style.display = 'block';
+    $('wizard-name-display').textContent = wizardName;
+    refreshWizard();
+    refreshLocation();
+    refreshSpells();
+  }
+
+  async function refreshWizard() {
+    const result = await api('/wizard', 'GET');
+    if (!result.ok) return;
+    $('spell-count-pill').textContent = `${result.data.spells_known_count} / ${result.data.spells_known_capacity} spells known`;
+  }
+
+  async function refreshLocation() {
+    const result = await api('/location', 'GET');
+    if (!result.ok) return;
+    currentLocationId = null;
+    for (const [id, npcs] of Object.entries(LOCATION_NPCS)) {
+      // best-effort match by name since /location doesn't return an id
+    }
+    renderLocation(result.data);
+  }
+
+  function findLocationIdByName(name) {
+    const map = { 'Town Square': 'town_square', 'Riverbank': 'riverbank', 'The City': 'city', 'Foot of the Vine': 'castle_base', "Grip's Sky Castle": 'sky_castle' };
+    return map[name] || null;
+  }
+
+  function renderLocation(loc) {
+    $('location-name').textContent = loc.name;
+    $('location-desc').textContent = loc.description;
+    const exitList = $('exit-list');
+    exitList.innerHTML = '';
+    (loc.exits || []).forEach((exit) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-outline btn-small';
+      btn.textContent = `Go ${exit.direction}`;
+      btn.title = exit.description;
+      btn.addEventListener('click', () => move(exit.direction));
+      exitList.appendChild(btn);
+    });
+
+    currentLocationId = findLocationIdByName(loc.name);
+    renderNpcs(currentLocationId);
+  }
+
+  async function move(direction) {
+    const result = await api('/location', 'PUT', { to: direction });
+    if (!result.ok) {
+      showMsg($('global-msg'), (result.data && result.data.error) || 'Could not move that way.', 'error');
+      return;
+    }
+    showMsg($('global-msg'), '', null);
+    $('npc-dialogue').innerHTML = '';
+    renderLocation(result.data);
+  }
+
+  function renderNpcs(locationId) {
+    const list = $('npc-list');
+    list.innerHTML = '';
+    const npcs = LOCATION_NPCS[locationId] || [];
+    if (npcs.length === 0) {
+      list.innerHTML = '<span class="muted">Nobody here to talk to.</span>';
+      return;
+    }
+    npcs.forEach((id) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-outline btn-small';
+      btn.textContent = NPC_NAMES[id] || id;
+      btn.addEventListener('click', () => talkTo(id));
+      list.appendChild(btn);
+    });
+  }
+
+  async function talkTo(npcId) {
+    const result = await api(`/npc/${npcId}/talk`, 'POST');
+    const box = $('npc-dialogue');
+    if (!result.ok) {
+      box.innerHTML = `<p class="muted">${NPC_NAMES[npcId] || npcId} is not here right now.</p>`;
+      return;
+    }
+    box.innerHTML = `<p><strong>${NPC_NAMES[npcId] || npcId}:</strong><br>${escapeHtml(result.data.line).replace(/\n/g, '<br>')}</p>`;
+  }
+
+  async function refreshSpells() {
+    const result = await api('/spells', 'GET');
+    if (!result.ok) return;
+    renderSpells(result.data);
+  }
+
+  function renderSpells(spells) {
+    const list = $('spell-list');
+    list.innerHTML = '';
+    if (spells.length === 0) {
+      list.innerHTML = '<span class="muted">Nothing available to study yet.</span>';
+      return;
+    }
+    spells.forEach((spell) => {
+      const row = document.createElement('div');
+      row.className = 'spell-row';
+
+      const info = document.createElement('div');
+      info.innerHTML = `<div class="spell-name">${spell.name}${spell.known ? ' <span class="muted">(known)</span>' : ''}</div><div class="spell-desc">${escapeHtml(spell.description)}</div>`;
+      row.appendChild(info);
+
+      const actions = document.createElement('div');
+      if (spell.known) {
+        const castBtn = document.createElement('button');
+        castBtn.className = 'btn btn-small';
+        castBtn.textContent = spell.one_shot && spell.already_cast ? 'Already cast' : 'Cast';
+        castBtn.disabled = Boolean(spell.one_shot && spell.already_cast);
+        castBtn.addEventListener('click', () => castSpell(spell.id));
+        actions.appendChild(castBtn);
+
+        const forgetBtn = document.createElement('button');
+        forgetBtn.className = 'btn-outline btn-small';
+        forgetBtn.textContent = 'Forget';
+        forgetBtn.addEventListener('click', () => forgetSpell(spell.id));
+        actions.appendChild(forgetBtn);
+      } else {
+        const studyBtn = document.createElement('button');
+        studyBtn.className = 'btn btn-small';
+        studyBtn.textContent = `Study (${formatDuration(spell.study_time_seconds)})`;
+        studyBtn.addEventListener('click', () => studySpell(spell.id));
+        actions.appendChild(studyBtn);
+      }
+      row.appendChild(actions);
+      list.appendChild(row);
+
+      if (spell.studying) {
+        const bar = document.createElement('div');
+        bar.className = 'progress-bar';
+        bar.innerHTML = `<div class="progress-fill" style="width:${spell.percent || 0}%"></div>`;
+        list.appendChild(bar);
+      }
+    });
+  }
+
+  function formatDuration(sec) {
+    if (sec < 60) return `${sec}s`;
+    const m = Math.round(sec / 60);
+    return `${m}m`;
+  }
+
+  async function castSpell(id) {
+    const result = await api(`/spells/${id}/cast`, 'POST');
+    if (!result.ok) {
+      let msg = 'Could not cast that spell.';
+      if (result.status === 429) {
+        const retry = result.res.headers.get('Retry-After');
+        msg = `On cooldown — try again in ${retry}s.`;
+      } else if (result.data && result.data.reason) {
+        msg = `Cannot cast: ${result.data.reason.replace(/_/g, ' ')}.`;
+      }
+      showMsg($('global-msg'), msg, 'error');
+      return;
+    }
+    showMsg($('global-msg'), result.data.effect, 'info');
+    refreshWizard();
+    refreshSpells();
+    refreshLocation();
+  }
+
+  async function forgetSpell(id) {
+    const result = await api(`/spells/${id}`, 'DELETE');
+    if (!result.ok) return;
+    refreshWizard();
+    refreshSpells();
+  }
+
+  async function studySpell(id) {
+    const result = await api(`/spells/${id}/study`, 'POST');
+    if (!result.ok) {
+      let msg = 'Could not begin studying.';
+      if (result.status === 423) {
+        const retry = result.res.headers.get('Retry-After');
+        msg = `Already studying something else — ${retry}s remaining on that.`;
+      } else if (result.data && result.data.reason) {
+        msg = `Cannot study: ${result.data.reason.replace(/_/g, ' ')}.`;
+      }
+      showMsg($('global-msg'), msg, 'error');
+      return;
+    }
+    showMsg($('global-msg'), `Studying ${id}…`, 'info');
+    pollStudy(id);
+  }
+
+  function pollStudy(id) {
+    if (studyPollTimer) clearInterval(studyPollTimer);
+    studyEtag = null;
+    studyPollTimer = setInterval(async () => {
+      const result = await api(`/spells/${id}/study`, 'GET');
+      if (result.status === 304) return; // no change since last check
+      if (!result.ok && result.status !== 304) {
+        clearInterval(studyPollTimer);
+        return;
+      }
+      if (result.data && result.data.status === 'complete') {
+        clearInterval(studyPollTimer);
+        studyEtag = null;
+        showMsg($('global-msg'), `${id} learned.`, 'info');
+        refreshWizard();
+        refreshSpells();
+        return;
+      }
+      if (result.res) studyEtag = result.res.headers.get('ETag');
+      refreshSpells();
+    }, 3000);
+  }
+
+  async function refreshLog() {
+    const result = await api('/wizard/log', 'GET');
+    const list = $('log-list');
+    if (!result.ok) { list.innerHTML = '<span class="muted">Could not load log.</span>'; return; }
+    list.innerHTML = result.data
+      .slice()
+      .reverse()
+      .map((entry) => `<div class="log-entry">${escapeHtml(entry.event)}</div>`)
+      .join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // --- Boot ---
+  if (serverUrl && apiKey) {
+    $('server-status').textContent = '';
+    api('/wizard', 'GET').then((result) => {
+      if (result.ok) {
+        wizardName = result.data.name;
+        enterGame();
+      } else {
+        $('screen-setup').style.display = 'block';
+        $('wizard-setup-card').style.display = 'block';
+      }
+    });
+  } else {
+    $('screen-setup').style.display = 'block';
+  }
+})();
+</script>
+</body>
+</html>

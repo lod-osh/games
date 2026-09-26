@@ -1,0 +1,594 @@
+openapi: 3.1.0
+info:
+  title: Wizard API Game
+  version: "1.0.0"
+  description: >
+    A text RPG played entirely through HTTP requests. Status codes and
+    headers are not invented flavor — a 423 means the same thing here as
+    it does anywhere else. This document explains what that meaning is
+    in context.
+
+servers:
+  - url: https://api.example.com/v1
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Wizard
+  - name: World
+  - name: Spells
+  - name: Casting
+
+paths:
+  /wizard:
+    post:
+      tags: [Wizard]
+      summary: Create a wizard
+      security: []
+      description: >
+        Issues a permanent API key. There is no recovery mechanism —
+        losing this key means losing access to this wizard, permanently.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 32
+      responses:
+        "201":
+          description: Wizard created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WizardCreated"
+        "400":
+          description: Name missing or out of length bounds.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      tags: [Wizard]
+      summary: Get your own stats
+      responses:
+        "200":
+          description: Current wizard state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wizard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /wizard/focus:
+    put:
+      tags: [Wizard]
+      summary: Set current study priority
+      description: Idempotent — setting the same focus twice changes nothing further.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [spell_id]
+              properties:
+                spell_id:
+                  type: string
+      responses:
+        "200":
+          description: Focus set.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wizard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wizard/log:
+    get:
+      tags: [Wizard]
+      summary: Event log
+      description: A record of what you yourself have done so far.
+      responses:
+        "200":
+          description: Log entries, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LogEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /location:
+    get:
+      tags: [World]
+      summary: Look around
+      description: Read-only. Safe to call as often as you like; looking changes nothing.
+      responses:
+        "200":
+          description: A description of where you are, and what's changed since it last mattered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    put:
+      tags: [World]
+      summary: Move
+      description: >
+        Idempotent — declaring where you stand, even repeatedly, leaves
+        you in exactly one place.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties:
+                to:
+                  type: string
+                  description: Direction or named destination.
+      responses:
+        "200":
+          description: New location.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "400":
+          description: Not a valid direction from here.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /npc/{id}/talk:
+    post:
+      tags: [World]
+      summary: Talk to an NPC
+      description: >
+        Non-idempotent — every call is a new conversational turn, even
+        toward the same NPC, even with nothing new to say.
+      parameters:
+        - $ref: "#/components/parameters/NpcId"
+      responses:
+        "200":
+          description: What they say to you this time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DialogueLine"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /spells:
+    get:
+      tags: [Spells]
+      summary: List visible spells
+      description: >
+        Known spells and currently-eligible-to-learn spells only.
+        Anything whose prerequisites aren't met is fully omitted —
+        not shown as locked, not hinted at.
+      responses:
+        "200":
+          description: Visible spells. Shape depends on known state — see schema.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Spell"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /spells/known:
+    get:
+      tags: [Spells]
+      summary: List known spells only
+      responses:
+        "200":
+          description: Spells you currently know.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KnownSpell"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /spells/{id}:
+    get:
+      tags: [Spells]
+      summary: Detail on one visible spell
+      parameters:
+        - $ref: "#/components/parameters/SpellId"
+      responses:
+        "200":
+          description: Spell detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spell"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: >
+            Doesn't exist, or exists but isn't visible to you yet.
+            Deliberately indistinguishable — the API does not leak
+            existence of spells you can't yet see.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [Spells]
+      summary: Forget a known spell
+      description: Final. Frees one of your six known-spell slots. Cannot be undone.
+      parameters:
+        - $ref: "#/components/parameters/SpellId"
+      responses:
+        "200":
+          description: Forgotten.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /spells/{id}/study:
+    post:
+      tags: [Spells]
+      summary: Begin studying a spell
+      description: Blocked at start, not at completion, if you're at capacity or missing a prerequisite.
+      parameters:
+        - $ref: "#/components/parameters/SpellId"
+      responses:
+        "200":
+          description: Study begun.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyProgress"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Blocked from starting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Already known, or already studying this exact spell.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyConflictError"
+        "423":
+          description: Locked — currently studying something else.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the current study session ends.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      tags: [Spells]
+      summary: Check study progress
+      description: Supports conditional GET via If-None-Match / ETag.
+      parameters:
+        - $ref: "#/components/parameters/SpellId"
+        - in: header
+          name: If-None-Match
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Progress has changed since your last check.
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyProgress"
+        "304":
+          description: Nothing's changed since your last check. No body.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No study in progress for this spell, or spell not visible.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [Spells]
+      summary: Abandon in-progress study
+      description: Final. Progress is not saved; a later attempt restarts from zero.
+      parameters:
+        - $ref: "#/components/parameters/SpellId"
+      responses:
+        "200":
+          description: Abandoned.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Nothing is currently being studied for this spell.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyConflictError"
+
+  /spells/{id}/cast:
+    post:
+      tags: [Casting]
+      summary: Cast a known spell
+      parameters:
+        - $ref: "#/components/parameters/SpellId"
+      responses:
+        "200":
+          description: Cast successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CastResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Spell not known. Unconditional — this is the only reason casting can be forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >
+            Already cast, permanently. One-shot spells (e.g. Grow, Push,
+            Awaken) cannot be cast again once their effect has taken
+            hold, even if forgotten and relearned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CastConflictError"
+        "429":
+          description: On cooldown. Repeatable spells only.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: The permanent, unrecoverable key issued by POST /wizard.
+
+  parameters:
+    SpellId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    NpcId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Doesn't exist, or isn't visible to you. Never distinguished.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    StudyForbiddenError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: forbidden
+        reason:
+          type: string
+          enum: [capacity_full, prerequisite_unmet]
+
+    StudyConflictError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: conflict
+        reason:
+          type: string
+          enum: [already_known, already_studying, nothing_in_progress]
+
+    CastConflictError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: conflict
+        reason:
+          type: string
+          enum: [already_cast]
+
+    WizardCreated:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        api_key:
+          type: string
+          description: Shown once. Store it — there is no way to recover it.
+
+    Wizard:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        focus:
+          type: string
+          nullable: true
+        spells_known:
+          type: array
+          items:
+            type: string
+        spells_known_count:
+          type: integer
+        spells_known_capacity:
+          type: integer
+          example: 6
+
+    Location:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        exits:
+          type: array
+          items:
+            type: string
+
+    DialogueLine:
+      type: object
+      properties:
+        npc_id:
+          type: string
+        line:
+          type: string
+
+    LogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        event:
+          type: string
+
+    # Shape-shifting: fields differ by known state rather than a fixed
+    # shape with nulls. EligibleSpell appears for unknown-but-visible
+    # spells; KnownSpell for spells you know.
+    Spell:
+      oneOf:
+        - $ref: "#/components/schemas/EligibleSpell"
+        - $ref: "#/components/schemas/KnownSpell"
+
+    EligibleSpell:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        known:
+          type: boolean
+          example: false
+        study_time_seconds:
+          type: integer
+
+    KnownSpell:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        known:
+          type: boolean
+          example: true
+        one_shot:
+          type: boolean
+        cooldown_seconds:
+          type: integer
+          nullable: true
+          description: Null for one-shot spells — cooldown doesn't apply.
+        already_cast:
+          type: boolean
+          description: Only meaningful for one-shot spells.
+
+    StudyProgress:
+      type: object
+      properties:
+        spell_id:
+          type: string
+        status:
+          type: string
+          enum: [studying, complete]
+        percent_complete:
+          type: integer
+        time_remaining_seconds:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+
+    CastResult:
+      type: object
+      properties:
+        spell_id:
+          type: string
+        effect:
+          type: string
+          description: Freeform narration of what casting this spell just did.
