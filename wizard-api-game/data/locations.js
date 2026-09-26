@@ -8,12 +8,12 @@ module.exports = {
   town_square: {
     name: 'Town Square',
     description:
-      "Frozen mid-gesture, mid-breath. Nobody here is a statue, exactly " +
-      "— they simply stopped, the way a held note stops, and nothing " +
-      "in sight so much as flinches when you move past it. A baker " +
-      "stands with dough hanging in the air. A child hangs mid-leap " +
-      "over a puddle. An old woman sits over her knitting. All three " +
-      "can still speak, if you're willing to listen to people who " +
+      "This place seems like it should be your home, but it's unfamiliar. " +
+      " The townspeople appear to be frozen in place. " +
+      "It's as if their feet are cemented to the ground. A baker " +
+      "stands halfway in the doorway of his bakery. A child is holding a jump rope, stationary. " +
+      "An old woman sits over her knitting. All three " +
+      "take notice of you." +
       "can't do anything else.",
     exits: { south: 'riverbank' }
   },
@@ -22,8 +22,7 @@ module.exports = {
     name: 'Riverbank',
     description: (flags) =>
       flags.flow
-        ? "The river runs hard and full, the fisherman's boat straining " +
-          'at its rope.'
+        ? "The river runs hard and full, the fisherman's boat finall afloat.'
         : 'A dry riverbed. A man sits in a boat that has nothing to float on.',
     exits: (flags) =>
       flags.flow
@@ -35,8 +34,7 @@ module.exports = {
     name: 'The City',
     description: (flags) =>
       !flags.debug
-        ? "Roaches, wrong-sized, spill from every doorway faster than " +
-          "anything should move."
+        ? "Giant roaches are crawling every surface."
         : 'The streets are quiet now. The wounded are finally visible.',
     exits: (flags) => (flags.grow ? { climb: 'castle_base' } : {})
   },
@@ -53,7 +51,7 @@ module.exports = {
     description: (flags) =>
       flags.push
         ? 'The portal is sealed. Grip is gone. Only quiet remains.'
-        : 'Grip waits, unhurried, entirely too pleased to see you.',
+        : 'Grip waits, unhurried, a smile twisting on his face.',
     exits: { down: 'castle_base' }
   }
 };
