@@ -20,6 +20,15 @@ app.use(express.json());
 const openapiDocument = yaml.load(
   fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8')
 );
+
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Wizard API Game',
+    docs: '/docs',
+    hint: 'POST /wizard with {"name": "..."} to begin.'
+  });
+});
+
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
 app.use(auth);
