@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wizard API Game — Derek Carttar</title>
+<title>Wizard API Game</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,16 +11,10 @@
   html { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
   *, *::before, *::after { box-sizing: inherit; }
   body { margin: 0; font-family: 'Source Sans 3', sans-serif; background: #1F2937; color: #E7E2D8; overflow-x: hidden; }
-  a { color: #E3A857; }
-  a:hover { color: #F0C078; }
-  button { font-family: inherit; cursor: pointer; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
-  .wrap-wide { max-width: 1000px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
   h1, h2, h3 { font-family: 'Source Sans 3', sans-serif; margin: 0; }
-  nav.top-nav { position: sticky; top: 0; background: #1B222E; border-bottom: 1px solid #384156; z-index: 30; }
-  nav.top-nav .wrap { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: clamp(12px, 3vw, 18px) clamp(16px, 5vw, 24px); max-width: 1280px; gap: 12px; }
-  nav.top-nav a { text-decoration: none; font-weight: 600; font-size: clamp(13px, 2vw, 15px); }
-  .kicker { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #E3A857; margin-bottom: 6px; }
+  a { color: #E3A857; }
+  button { font-family: inherit; cursor: pointer; }
   .card { background: #262F3F; border: 1px solid #384156; border-radius: 12px; padding: clamp(16px, 4vw, 24px); margin-bottom: 20px; }
   .btn { background: #B45309; color: #FAF8F5; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px 4px 0; }
   .btn:hover { background: #8A3E09; }
@@ -41,380 +35,225 @@
   .progress-fill { background: #E3A857; height: 100%; transition: width 0.4s ease; }
   .exit-list, .npc-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .log-entry { font-size: 13px; color: #A8A29E; padding: 4px 0; border-bottom: 1px solid #2E3648; }
+  .kicker { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #E3A857; margin-bottom: 6px; }
   header.top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
   .stat-pill { background: #1B222E; border-radius: 999px; padding: 6px 14px; font-size: 13px; }
   #screen-setup, #screen-game { display: none; }
 
-  /* Tabs */
-  .tabbar { display: flex; gap: 8px; margin-bottom: 8px; }
-  .tab-btn { background: transparent; border: 1px solid #384156; color: #A8A29E; padding: 10px 20px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 14px; border-bottom: none; }
-  .tab-btn.active { background: #262F3F; color: #E7E2D8; border-color: #384156; }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+  .api-log-entry { border: 1px solid #384156; border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
+  .api-log-entry summary { list-style: none; cursor: pointer; padding: 8px 10px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-family: 'Source Code Pro', monospace; }
+  .api-log-entry summary::-webkit-details-marker { display: none; }
+  .api-log-entry[open] summary { border-bottom: 1px solid #384156; }
+  .log-method { font-weight: 700; color: #E3A857; min-width: 44px; }
+  .log-path { flex: 1; color: #E7E2D8; word-break: break-all; }
+  .log-status { font-weight: 700; padding: 1px 8px; border-radius: 999px; font-size: 12px; }
+  .log-status-ok { background: #1F3A2A; color: #86EFAC; }
+  .log-status-info { background: #1F3A3A; color: #A6E3D4; }
+  .log-status-warn { background: #3A2E1F; color: #F0C674; }
+  .log-status-error { background: #4A1F24; color: #F3B4B4; }
+  .log-time { color: #6B7280; font-size: 11px; white-space: nowrap; }
+  .log-detail { padding: 10px; background: #1B222E; }
+  .log-detail-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6B7280; margin: 8px 0 4px 0; }
+  .log-detail-label:first-child { margin-top: 0; }
+  .log-detail pre { background: #14181F; color: #A6E3D4; font-family: 'Source Code Pro', monospace; font-size: 12px; padding: 8px; border-radius: 6px; overflow-x: auto; margin: 0; }
 
-  /* API reference panel */
-  .doc-frame { border: 1px solid #384156; border-radius: 12px; overflow: hidden; margin-top: 16px; }
-  .lede { font-size: clamp(14px, 2.2vw, 16px); line-height: 1.7; color: #A8A29E; margin: 0 0 12px 0; max-width: 760px; }
+  .tab-switch { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #384156; }
+  .tab-btn { background: transparent; border: none; color: #A8A29E; padding: 10px 4px; font-weight: 600; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab-btn.active { color: #E3A857; border-bottom-color: #E3A857; }
+  .ref-group { margin-bottom: 18px; }
+  .ref-group-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7280; margin-bottom: 8px; }
+  .ref-entry { border-bottom: 1px solid #2E3648; padding: 10px 0; }
+  .ref-entry:last-child { border-bottom: none; }
+  .ref-method-path { font-family: 'Source Code Pro', monospace; font-size: 13px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .ref-desc { margin-top: 4px; font-style: italic; }
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<nav class="top-nav">
-  <div class="wrap wrap-wide">
-    <div style="font-weight: 700; font-size: clamp(16px, 3vw, 20px); color: #E7E2D8;">Derek Carttar</div>
-    <a href="../../index.html">← Back to Portfolio</a>
-  </div>
-</nav>
-
-<div class="wrap wrap-wide" style="padding-top: clamp(20px, 4vw, 32px);">
   <header class="top">
-    <div>
-      <div class="kicker">Full-Stack Documentation Sample</div>
-      <h1 style="font-size: clamp(22px, 4vw, 28px);">Wizard API Game</h1>
-    </div>
+    <h1 style="font-size: clamp(22px, 4vw, 28px);">Wizard API Game</h1>
+    <span class="muted">A text RPG played entirely through HTTP requests</span>
   </header>
 
-  <div class="tabbar">
-    <button class="tab-btn active" data-tab="play">Play</button>
-    <button class="tab-btn" data-tab="docs">API Reference</button>
+  <div class="tab-switch">
+    <button class="tab-btn active" id="tab-btn-play" type="button">Play</button>
+    <button class="tab-btn" id="tab-btn-reference" type="button">Reference</button>
   </div>
 
-  <!-- ============ PLAY TAB ============ -->
-  <div class="tab-panel active" id="tab-play">
-    <div class="wrap" style="max-width: 720px; padding-left: 0; padding-right: 0;">
+  <div id="tab-play">
+  <div class="card" id="api-activity-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div class="kicker" style="margin-bottom: 0;">API Activity</div>
+      <a id="docs-link" href="#" target="_blank" rel="noopener" style="font-size: 13px;">View full API docs →</a>
+    </div>
+    <div class="muted" style="margin: 4px 0 10px 0;">Every action below is a real HTTP request to a live server. Tap one to see the actual request and response.</div>
+    <div id="api-log-list"><span class="muted">No requests yet.</span></div>
+  </div>
 
-      <p class="muted" style="margin-bottom: 16px;">A text RPG played entirely through HTTP requests. <strong>This page may take a moment to load.</strong></p>
+  <!-- SETUP SCREEN -->
+  <div id="screen-setup">
+    <div class="card">
+      <div class="kicker">Server</div>
+      <label for="server-url">Server URL</label>
+      <input type="text" id="server-url" placeholder="https://your-app.onrender.com">
+      <div class="muted" style="margin-bottom: 10px;">Don't change the URL above, just click Connect. This is hosted on a free Render instance, so the first request after idle time can take several seconds while it wakes up.</div>
+      <button class="btn" id="btn-check-server">Connect</button>
+      <div id="server-status"></div>
+    </div>
 
-      <!-- SETUP SCREEN -->
-      <div id="screen-setup">
-        <div class="card">
-          <div class="kicker">Server</div>
-          <label for="server-url">Server URL</label>
-          <input type="text" id="server-url" placeholder="https://your-app.onrender.com">
-          <div class="muted" style="margin-bottom: 10px;">Don't change the URL above, just click Connect. This is hosted on a free Render instance, so the first request after idle time can take several seconds while it wakes up.</div>
-          <button class="btn" id="btn-check-server">Connect</button>
-          <div id="server-status"></div>
-        </div>
-
-        <div class="card" id="wizard-setup-card" style="display: none;">
-          <div class="kicker">Your Wizard</div>
-          <div id="existing-key-block">
-            <label for="existing-key">Have an API key already?</label>
-            <input type="text" id="existing-key" placeholder="sk_wiz_...">
-            <button class="btn-outline" id="btn-resume">Resume with this key</button>
-          </div>
-          <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
-          <label for="new-name">Or create a new wizard</label>
-          <input type="text" id="new-name" placeholder="Your wizard's name" maxlength="32">
-          <button class="btn" id="btn-create">Create new wizard</button>
-          <div class="muted" style="margin-top: 8px;">There is no password recovery. If you lose this key, that wizard is gone for good — the same way it is in the real API.</div>
-          <div id="setup-msg"></div>
-        </div>
+    <div class="card" id="wizard-setup-card" style="display: none;">
+      <div class="kicker">Your Wizard</div>
+      <div id="existing-key-block">
+        <label for="existing-key">Have an API key already?</label>
+        <input type="text" id="existing-key" placeholder="sk_wiz_...">
+        <button class="btn-outline" id="btn-resume">Resume with this key</button>
       </div>
-
-      <!-- GAME SCREEN -->
-      <div id="screen-game">
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-              <div class="kicker" id="wizard-name-display">Wizard</div>
-              <span class="stat-pill" id="spell-count-pill">0 / 6 spells known</span>
-            </div>
-            <div>
-              <button class="btn-outline btn-small" id="btn-copy-key">Copy API key</button>
-              <button class="btn-outline btn-small" id="btn-log-toggle">Event log</button>
-              <button class="btn-outline btn-small" id="btn-logout">Switch wizard</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="global-msg"></div>
-
-        <div class="card" id="location-card">
-          <div class="kicker" id="location-name">Location</div>
-          <p id="location-desc" class="muted"></p>
-          <div class="exit-list" id="exit-list"></div>
-        </div>
-
-        <div class="card" id="npc-card">
-          <div class="kicker">Speak with</div>
-          <div class="npc-list" id="npc-list"></div>
-          <div id="npc-dialogue" style="margin-top: 12px;"></div>
-        </div>
-
-        <div class="card" id="spells-card">
-          <div class="kicker">Spells</div>
-          <div id="spell-list"></div>
-        </div>
-
-        <div class="card" id="log-card" style="display: none;">
-          <div class="kicker">Event Log</div>
-          <div id="log-list"></div>
-        </div>
-      </div>
-
+      <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
+      <label for="new-name">Or create a new wizard</label>
+      <input type="text" id="new-name" placeholder="Your wizard's name" maxlength="32">
+      <button class="btn" id="btn-create">Create new wizard</button>
+      <div class="muted" style="margin-top: 8px;">There is no password recovery. If you lose this key, that wizard is gone for good — the same way it is in the real API.</div>
+      <div id="setup-msg"></div>
     </div>
   </div>
 
-  <!-- ============ API REFERENCE TAB ============ -->
-  <div class="tab-panel" id="tab-docs">
-    <p class="lede">
-      TODO: write a short intro to this reference — what the API is, how HTTP semantics map onto
-      game actions, and what a reader should know before trying it (auth, base URL, rate limits).
-    </p>
-    <div class="doc-frame">
-      <rapi-doc
-        id="wizard-api-doc"
-        theme="dark"
-        bg-color="#262F3F"
-        text-color="#E7E2D8"
-        primary-color="#E3A857"
-        nav-bg-color="#1B222E"
-        nav-text-color="#A8A29E"
-        nav-hover-bg-color="#2E3648"
-        render-style="read"
-        schema-style="table"
-        show-header="false"
-        allow-authentication="true"
-        allow-server-selection="false"
-        allow-spec-file-load="false"
-        allow-spec-url-load="false"
-        show-method-in-nav-bar="as-colored-block"
-        style="height: 85vh; min-height: 500px; width: 100%; display: block;"
-      ></rapi-doc>
+  <!-- GAME SCREEN -->
+  <div id="screen-game">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <div class="kicker" id="wizard-name-display">Wizard</div>
+          <span class="stat-pill" id="spell-count-pill">0 / 6 spells known</span>
+        </div>
+        <div>
+          <button class="btn-outline btn-small" id="btn-copy-key">Copy API key</button>
+          <button class="btn-outline btn-small" id="btn-log-toggle">Event log</button>
+          <button class="btn-outline btn-small" id="btn-logout">Switch wizard</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="global-msg"></div>
+
+    <div class="card" id="location-card">
+      <div class="kicker" id="location-name">Location</div>
+      <p id="location-desc" class="muted"></p>
+      <div class="exit-list" id="exit-list"></div>
+    </div>
+
+    <div class="card" id="npc-card">
+      <div class="kicker">Speak with</div>
+      <div class="npc-list" id="npc-list"></div>
+      <div id="npc-dialogue" style="margin-top: 12px;"></div>
+    </div>
+
+    <div class="card" id="spells-card">
+      <div class="kicker">Spells</div>
+      <div id="spell-list"></div>
+    </div>
+
+    <div class="card" id="log-card" style="display: none;">
+      <div class="kicker">Event Log</div>
+      <div id="log-list"></div>
+    </div>
+  </div>
+  </div>
+
+  <div id="tab-reference" style="display: none;">
+    <div class="card">
+      <div class="kicker">API Reference</div>
+      <p class="muted" style="margin-top: 4px;">Every endpoint this game uses, against whatever server URL is set on the Play tab. Full interactive docs are linked from the API Activity panel.</p>
+
+      <div class="ref-group">
+        <div class="ref-group-title">Wizard</div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">POST</span><span class="log-path">/wizard</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/wizard</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">PUT</span><span class="log-path">/wizard/focus</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/wizard/log</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+      </div>
+
+      <div class="ref-group">
+        <div class="ref-group-title">World</div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/location</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">PUT</span><span class="log-path">/location</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">POST</span><span class="log-path">/npc/{id}/talk</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+      </div>
+
+      <div class="ref-group">
+        <div class="ref-group-title">Spells</div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/spells</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/spells/known</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/spells/{id}</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">DELETE</span><span class="log-path">/spells/{id}</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">POST</span><span class="log-path">/spells/{id}/study</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/spells/{id}/study</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">DELETE</span><span class="log-path">/spells/{id}/study</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+      </div>
+
+      <div class="ref-group">
+        <div class="ref-group-title">Casting</div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">POST</span><span class="log-path">/spells/{id}/cast</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+      </div>
+
+      <div class="ref-group">
+        <div class="ref-group-title">General</div>
+        <div class="ref-entry">
+          <div class="ref-method-path"><span class="log-method">GET</span><span class="log-path">/</span></div>
+          <div class="ref-desc muted">[description]</div>
+        </div>
+      </div>
     </div>
   </div>
 
 </div>
 
-<script type="module" src="https://cdn.jsdelivr.net/npm/rapidoc/dist/rapidoc-min.js"></script>
 <script>
-// --- Tab switching ---
-(function () {
-  const buttons = document.querySelectorAll('.tab-btn');
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      buttons.forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    });
-  });
-})();
-
-// --- API reference spec ---
-// SKELETON ONLY. Paths, methods, parameters, schemas, and status codes below are
-// pulled from the real client code (games/wizard-api-game/wizard-client.html), so
-// they're accurate to the actual server. Every "summary", "description", and
-// "example" is a TODO for you to write — that's the part that's actually yours.
-const openApiSpec = {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "Wizard API Game",
-    "version": "1.0.0",
-    "description": "TODO: what this API is and why HTTP semantics double as game mechanics here."
-  },
-  "servers": [{ "url": "https://games-8zcm.onrender.com" }],
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": { "type": "http", "scheme": "bearer", "description": "TODO: explain the API key / bearer token model and that keys can't be recovered." }
-    },
-    "schemas": {
-      "Wizard": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" },
-          "api_key": { "type": "string", "description": "TODO — only returned on creation." },
-          "spells_known_count": { "type": "integer" },
-          "spells_known_capacity": { "type": "integer" }
-        }
-      },
-      "Location": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "exits": { "type": "array", "items": { "type": "string" }, "description": "TODO — direction strings accepted by PUT /location." }
-        }
-      },
-      "Spell": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "known": { "type": "boolean" },
-          "studying": { "type": "boolean" },
-          "percent": { "type": "integer", "description": "TODO — study progress, present while studying." },
-          "study_time_seconds": { "type": "integer" },
-          "one_shot": { "type": "boolean", "description": "TODO" },
-          "already_cast": { "type": "boolean", "description": "TODO" }
-        }
-      },
-      "LogEntry": {
-        "type": "object",
-        "properties": {
-          "event": { "type": "string" }
-        }
-      }
-    }
-  },
-  "security": [{ "bearerAuth": [] }],
-  "paths": {
-    "/": {
-      "get": {
-        "summary": "TODO",
-        "description": "TODO — health check, used by the client's Connect button.",
-        "security": [],
-        "responses": {
-          "200": { "description": "TODO" }
-        }
-      }
-    },
-    "/wizard": {
-      "post": {
-        "summary": "TODO",
-        "description": "TODO — creates a new wizard.",
-        "security": [],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 32 } } } } } },
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wizard" } } } },
-          "400": { "description": "TODO" }
-        }
-      },
-      "get": {
-        "summary": "TODO",
-        "description": "TODO — returns the wizard belonging to the caller's API key.",
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wizard" } } } },
-          "401": { "description": "TODO" }
-        }
-      }
-    },
-    "/wizard/log": {
-      "get": {
-        "summary": "TODO",
-        "description": "TODO",
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/LogEntry" } } } } }
-        }
-      }
-    },
-    "/location": {
-      "get": {
-        "summary": "TODO",
-        "description": "TODO",
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Location" } } } }
-        }
-      },
-      "put": {
-        "summary": "TODO",
-        "description": "TODO — moves the wizard in the given direction.",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["to"], "properties": { "to": { "type": "string", "description": "TODO — must be one of the current location's exits." } } } } } },
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Location" } } } },
-          "400": { "description": "TODO — invalid or unavailable exit." }
-        }
-      }
-    },
-    "/npc/{npcId}/talk": {
-      "post": {
-        "summary": "TODO",
-        "description": "TODO",
-        "parameters": [{ "name": "npcId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "TODO" }],
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "type": "object", "properties": { "line": { "type": "string" } } } } } },
-          "404": { "description": "TODO — NPC not present at the wizard's current location." }
-        }
-      }
-    },
-    "/spells": {
-      "get": {
-        "summary": "TODO",
-        "description": "TODO — lists spells available to the wizard; unlearned/hidden spells are omitted entirely rather than shown locked.",
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Spell" } } } } }
-        }
-      }
-    },
-    "/spells/{spellId}": {
-      "delete": {
-        "summary": "TODO",
-        "description": "TODO — forgets a known spell, freeing a slot toward the 6-spell cap.",
-        "parameters": [{ "name": "spellId", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "204": { "description": "TODO" },
-          "404": { "description": "TODO" }
-        }
-      }
-    },
-    "/spells/{spellId}/study": {
-      "post": {
-        "summary": "TODO",
-        "description": "TODO — begins studying an unlearned spell for its study_time_seconds duration.",
-        "parameters": [{ "name": "spellId", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "TODO" },
-          "403": { "description": "TODO — at the 6-spell capacity; forget a spell first." },
-          "423": { "description": "TODO — already studying something else. Response includes a Retry-After header." }
-        }
-      },
-      "get": {
-        "summary": "TODO",
-        "description": "TODO — polls study progress. Supports conditional GET: send If-None-Match with the last ETag to get a 304 when nothing has changed.",
-        "parameters": [
-          { "name": "spellId", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "If-None-Match", "in": "header", "required": false, "schema": { "type": "string" }, "description": "TODO" }
-        ],
-        "responses": {
-          "200": { "description": "TODO — includes an ETag header; body reports progress or { status: 'complete' } once learned." },
-          "304": { "description": "TODO — no change since the given ETag." }
-        }
-      }
-    },
-    "/spells/{spellId}/cast": {
-      "post": {
-        "summary": "TODO",
-        "description": "TODO — casts a known spell.",
-        "parameters": [{ "name": "spellId", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "TODO", "content": { "application/json": { "schema": { "type": "object", "properties": { "effect": { "type": "string" } } } } } },
-          "429": { "description": "TODO — on cooldown. Response includes a Retry-After header." }
-        }
-      }
-    }
-  }
-};
-
-function initApiDocs() {
-  const el = document.getElementById('wizard-api-doc');
-  if (!el) return;
-  try {
-    if (typeof el.loadSpec === 'function') {
-      el.loadSpec(openApiSpec);
-    } else {
-      const blob = new Blob([JSON.stringify(openApiSpec)], { type: 'application/json' });
-      el.setAttribute('spec-url', URL.createObjectURL(blob));
-    }
-  } catch (e) {
-    if (window.console && console.error) console.error('Could not load API spec into RapiDoc', e);
-  }
-}
-if (customElements.get('rapi-doc')) {
-  initApiDocs();
-} else {
-  window.addEventListener('DOMContentLoaded', () => {
-    const check = setInterval(() => {
-      if (customElements.get('rapi-doc')) {
-        clearInterval(check);
-        initApiDocs();
-      }
-    }, 50);
-  });
-}
-
-// --- Game client (unchanged from wizard-client.html) ---
 (function () {
   const NPC_NAMES = {
     baker: 'Baker', child: 'Child', old_woman: 'Old Woman',
@@ -435,11 +274,44 @@ if (customElements.get('rapi-doc')) {
   let currentLocationId = null;
   let studyPollTimer = null;
   let studyEtag = null;
+  let apiLog = [];
+  const MAX_LOG_ENTRIES = 40;
 
   const $ = (id) => document.getElementById(id);
 
   function showMsg(el, text, kind) {
     el.innerHTML = text ? `<div class="msg msg-${kind || 'error'}">${text}</div>` : '';
+  }
+
+  function statusClass(status) {
+    if (status === 0) return 'log-status-error';
+    if (status >= 200 && status < 300) return 'log-status-ok';
+    if (status === 304) return 'log-status-info';
+    if (status >= 400 && status < 500) return 'log-status-warn';
+    return 'log-status-error';
+  }
+
+  function renderApiLog() {
+    const list = $('api-log-list');
+    if (apiLog.length === 0) {
+      list.innerHTML = '<span class="muted">No requests yet.</span>';
+      return;
+    }
+    list.innerHTML = apiLog.map((entry) => `
+      <details class="api-log-entry">
+        <summary>
+          <span class="log-method">${entry.method}</span>
+          <span class="log-path">${escapeHtml(entry.path)}</span>
+          <span class="log-status ${statusClass(entry.status)}">${entry.status === 0 ? 'ERR' : entry.status}</span>
+          <span class="log-time">${entry.time}</span>
+        </summary>
+        <div class="log-detail">
+          ${entry.requestBody ? `<div class="log-detail-label">Request body</div><pre>${escapeHtml(JSON.stringify(entry.requestBody, null, 2))}</pre>` : ''}
+          ${Object.keys(entry.notableHeaders).length ? `<div class="log-detail-label">Response headers</div><pre>${escapeHtml(JSON.stringify(entry.notableHeaders, null, 2))}</pre>` : ''}
+          <div class="log-detail-label">Response body</div><pre>${escapeHtml(entry.responseBody !== null ? JSON.stringify(entry.responseBody, null, 2) : '(no body — ' + entry.status + ')')}</pre>
+        </div>
+      </details>
+    `).join('');
   }
 
   async function api(path, method, body) {
@@ -456,22 +328,45 @@ if (customElements.get('rapi-doc')) {
         body: body ? JSON.stringify(body) : undefined
       });
     } catch (e) {
+      apiLog.unshift({
+        method: method || 'GET', path, requestBody: body || null,
+        status: 0, notableHeaders: {}, responseBody: { error: 'network_error' },
+        time: new Date().toLocaleTimeString()
+      });
+      if (apiLog.length > MAX_LOG_ENTRIES) apiLog.pop();
+      renderApiLog();
       return { ok: false, networkError: true, status: 0, data: null, res: null };
     }
     let data = null;
     if (res.status !== 304 && res.status !== 204) {
       try { data = await res.json(); } catch (e) { data = null; }
     }
+    const notableHeaders = {};
+    if (res.headers.get('ETag')) notableHeaders['ETag'] = res.headers.get('ETag');
+    if (res.headers.get('Retry-After')) notableHeaders['Retry-After'] = res.headers.get('Retry-After');
+    apiLog.unshift({
+      method: method || 'GET', path, requestBody: body || null,
+      status: res.status, notableHeaders, responseBody: data,
+      time: new Date().toLocaleTimeString()
+    });
+    if (apiLog.length > MAX_LOG_ENTRIES) apiLog.pop();
+    renderApiLog();
     return { ok: res.ok, status: res.status, data, res };
   }
 
   // --- Setup screen ---
   $('server-url').value = serverUrl;
 
+  function updateDocsLink() {
+    $('docs-link').href = serverUrl.replace(/\/$/, '') + '/docs';
+  }
+  updateDocsLink();
+
   $('btn-check-server').addEventListener('click', async () => {
     serverUrl = $('server-url').value.trim();
     if (!serverUrl) return;
     localStorage.setItem('wizardServerUrl', serverUrl);
+    updateDocsLink();
     showMsg($('server-status'), 'Connecting — this can take a few seconds if the server was asleep…', 'info');
     const result = await api('/', 'GET');
     if (result.networkError) {
@@ -555,6 +450,9 @@ if (customElements.get('rapi-doc')) {
     const result = await api('/location', 'GET');
     if (!result.ok) return;
     currentLocationId = null;
+    for (const [id, npcs] of Object.entries(LOCATION_NPCS)) {
+      // best-effort match by name since /location doesn't return an id
+    }
     renderLocation(result.data);
   }
 
@@ -760,6 +658,20 @@ if (customElements.get('rapi-doc')) {
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // --- Tabs ---
+  $('tab-btn-play').addEventListener('click', () => {
+    $('tab-btn-play').classList.add('active');
+    $('tab-btn-reference').classList.remove('active');
+    $('tab-play').style.display = 'block';
+    $('tab-reference').style.display = 'none';
+  });
+  $('tab-btn-reference').addEventListener('click', () => {
+    $('tab-btn-reference').classList.add('active');
+    $('tab-btn-play').classList.remove('active');
+    $('tab-reference').style.display = 'block';
+    $('tab-play').style.display = 'none';
+  });
 
   // --- Boot ---
   if (serverUrl && apiKey) {
