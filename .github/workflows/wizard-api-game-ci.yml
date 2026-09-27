@@ -1,5 +1,5 @@
 name: Wizard API Game CI
- 
+
 # Scoped to only run when this specific project's files change, since
 # this repo also holds other, unrelated games.
 on:
@@ -10,7 +10,7 @@ on:
   pull_request:
     paths:
       - 'wizard-api-game/**'
- 
+
 jobs:
   ci-check:
     runs-on: ubuntu-latest
@@ -19,14 +19,16 @@ jobs:
         working-directory: wizard-api-game
     steps:
       - uses: actions/checkout@v4
- 
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
- 
+
       - name: Install dependencies
         run: npm install
- 
+
       - name: Run CI check (syntax, spec, and a real server smoke test)
         run: npm test
- 
+
+      - name: Run behavioral test suite (state machine correctness)
+        run: npm run test:suite
