@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const spells = require('../data/spells');
 const { getKnownSet, logEvent } = require('../state');
@@ -12,8 +13,24 @@ const insertWizard = db.prepare(
 const updateFocus = db.prepare('UPDATE wizards SET focus_spell_id = ? WHERE id = ?');
 const getEvents = db.prepare('SELECT timestamp, event FROM events WHERE wizard_id = ? ORDER BY timestamp ASC');
 
+// This is the only unauthenticated route, and the only one that
+// creates a persistent resource — the natural target for spam.
+// Test-only bypass (RATE_LIMIT_DISABLED) so the test suite, which
+// legitimately creates many wizards per run, doesn't trip it.
+// Unset in production, so real traffic is always limited.
+const createWizardLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.RATE_LIMIT_DISABLED === 'true',
+  handler: (req, res) => {
+    res.status(429).json({ error: 'rate_limited', reason: 'too_many_wizards_created' });
+  }
+});
+
 // POST /wizard — no auth required. Permanent key, no recovery.
-router.post('/wizard', (req, res) => {
+router.post('/wizard', createWizardLimiter, (req, res) => {
   const name = (req.body && req.body.name || '').trim();
   if (!name || name.length < 2 || name.length > 32) {
     return res.status(400).json({ error: 'name must be 2-32 characters' });
