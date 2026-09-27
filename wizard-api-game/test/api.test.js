@@ -28,7 +28,8 @@ before(async () => {
     env: Object.assign({}, process.env, {
       PORT: String(PORT),
       DB_PATH: ':memory:',
-      STUDY_TIME_SCALE: String(SCALE)
+      STUDY_TIME_SCALE: String(SCALE),
+      RATE_LIMIT_DISABLED: 'true'
     }),
     stdio: 'pipe'
   });
