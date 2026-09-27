@@ -9,61 +9,60 @@ module.exports = {
     id: 'flow',
     name: 'Flow',
     description:
-      "A river does not ask the ground's permission to move. It simply " +
-      'does, and the ground remembers the shape of moving water long ' +
-      'after the water is gone.',
+      'Restore a current that has slowed or stopped.',
     prerequisite: null,
     study_time_seconds: 300,
     one_shot: false,
     cooldown_seconds: 30,
     effect:
-      'The riverbed drinks something invisible and gives it back as ' +
-      "motion — water where there wasn't any, moving hard enough to " +
-      'remember what it used to be.'
+      'The riverbed drinks deeply once again.'
   },
+
   calm: {
     id: 'calm',
     name: 'Calm',
     description:
-      'To still a thing mid-motion is not to end it. It is a held ' +
-      'breath, nothing more, and held breath always runs out.',
+      'To relax a panicked creature.',
     prerequisite: 'flow',
     study_time_seconds: 600,
     one_shot: false,
     cooldown_seconds: 60,
     effect:
-      "The roaches still, every leg caught mid-motion — the same way " +
-      'the town itself was stilled, in miniature, in your own hands.'
+      'The roaches slow, then stop as their feet are frozen.' +
+      ' They look angry.'
   },
+
   debug: {
     id: 'debug',
     name: 'Debug',
     description:
-      'Some things were never supposed to be here at all. Removing ' +
-      'them is not violence — it is correction.',
+      'Clean things up so they look and work better.',
     prerequisite: 'calm',
     study_time_seconds: 900,
     one_shot: false,
     cooldown_seconds: 120,
-    effect: "The roaches are gone. Actually gone — not stilled, not paused."
+    effect:
+      'The roaches evaporate into nothingness with a thousand screeching hisses.'
   },
+
   heal: {
     id: 'heal',
     name: 'Heal',
     description:
-      'The least remarkable of your miracles, and the most human one.',
+      'You might not be able to raise the dead, but you can help.',
     prerequisite: 'debug',
     study_time_seconds: 1200,
     one_shot: false,
     cooldown_seconds: 60,
-    effect: "Someone is standing who wasn't a moment ago."
+    effect:
+      'The villager stands, health restored!'
   },
+
   grow: {
     id: 'grow',
     name: 'Grow',
     description:
-      "What's planted only needs telling once. Asking twice wouldn't " +
-      'make it grow any further — it would only be asking.',
+      'Hasten and amplify the life of a deserving plant.',
     prerequisite: 'heal',
     study_time_seconds: 1800,
     one_shot: true,
@@ -73,12 +72,12 @@ module.exports = {
       'to bear weight, up toward wherever the castle sits above the ' +
       'clouds.'
   },
+
   fireball: {
     id: 'fireball',
     name: 'Fireball',
     description:
-      "The obvious answer to a sorcerer. That's exactly the problem " +
-      'with it.',
+      'Cast an orb of flame at an enemy.',
     prerequisite: 'grow',
     study_time_seconds: 2700,
     one_shot: false,
@@ -88,33 +87,33 @@ module.exports = {
       'the fire folds back on itself and goes out mid-air, like it ' +
       'forgot what it was for.'
   },
+
   push: {
     id: 'push',
     name: 'Push',
     description:
-      "Not force. Just the smallest true statement about where someone's " +
-      "weight already isn't.",
+      'A tiny shove.',
     prerequisite: 'fireball',
     study_time_seconds: 3600,
     one_shot: true,
     cooldown_seconds: null,
     effect:
-      'Grip goes back, off his own center, into the void his own ' +
-      'portal opened — and the portal folds shut behind him, sealed by ' +
-      'the one thing he never accounted for.'
+      'Grip flies off balance and tumbles into the void. ' +
+      'The portal closes, swallowing him up ' +
+      'and leaving nothing behind.'
   },
+
   thaw: {
     id: 'thaw',
     name: 'Thaw',
     description:
-      'What is forgotten does not return by asking again. What is only ' +
-      'frozen does.',
+      'Unfreeze what is stuck.',
     prerequisite: 'push',
     study_time_seconds: 5400,
     one_shot: true,
     cooldown_seconds: null,
     effect:
-      'The stillness breaks — not violently, just all at once, like ice ' +
-      'giving way to the water it forgot it was.'
+      "Slowly, the villagers' legs start to move again " +
+      'until they are dancing and cheering your name!'
   }
 };
