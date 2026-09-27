@@ -109,7 +109,7 @@
       <div class="muted" style="margin-top: 8px;">There is no password recovery. If you lose this key, that wizard is gone for good — the same way it is in the real API.</div>
       <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
       <div id="existing-key-block">
-        <label for="existing-key">Or, if you already have an API key, resume with it</label>
+        <label for="existing-key">Or, if you already have an API key, resume with the wizard you already created.</label>
         <input type="text" id="existing-key" placeholder="sk_wiz_...">
         <button class="btn-outline" id="btn-resume">Resume with this key</button>
       </div>
@@ -163,7 +163,7 @@
       <div class="kicker" style="margin-bottom: 0;">API Activity</div>
       <a id="docs-link" href="#" style="font-size: 13px;">API Reference</a>
     </div>
-    <div class="muted" style="margin: 4px 0 10px 0;">All the requests you trigger directly are listed here. Automatic background processes are not listed. Click one of the requests below to see more information.</div>
+    <div class="muted" style="margin: 4px 0 10px 0;">All the requests you trigger directly are listed here. Automatic background processes are not listed. Click a request to see more information .</div>
     <div id="api-log-list"><span class="muted">No requests yet.</span></div>
   </div>
   </div>
@@ -653,7 +653,7 @@ const wizardApiSpec = {
   "info": {
     "title": "Wizard API Game",
     "version": "1.0.0",
-    "description": "A text RPG played entirely through HTTP requests. Status codes and headers are not invented flavor — a 423 means the same thing here as it does anywhere else. This document explains what that meaning is in context.\n"
+    "description": "A text RPG played entirely through HTTP requests.\n"
   },
   "servers": [
     {
