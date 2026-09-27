@@ -100,7 +100,7 @@ function smokeTest() {
     const PORT = 4123;
     const server = spawn('node', ['server.js'], {
       cwd: __dirname,
-      env: Object.assign({}, process.env, { PORT: String(PORT), TRAIN_TIME_SCALE: '0.01' }),
+      env: Object.assign({}, process.env, { PORT: String(PORT), STUDY_TIME_SCALE: '0.01', RATE_LIMIT_DISABLED: 'true' }),
       stdio: 'pipe'
     });
 
