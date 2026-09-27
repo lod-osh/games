@@ -57,6 +57,14 @@
   .log-detail-label:first-child { margin-top: 0; }
   .log-detail pre { background: #14181F; color: #A6E3D4; font-family: 'Source Code Pro', monospace; font-size: 12px; padding: 8px; border-radius: 6px; overflow-x: auto; margin: 0; }
 
+  /* RapiDoc sets its own host width via JS after mounting, ignoring
+     the width set in its HTML attributes. It also reaches outside its
+     own element and force-sets width/height on its parent container.
+     Both need !important to override script-set inline styles. */
+  #reference-doc { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+  .rapidoc-wrapper { width: 100% !important; max-width: 100% !important; height: auto !important; overflow: hidden !important; box-sizing: border-box !important; }
+  rapi-doc::part(section-main-content) { padding: 24px !important; }
+
   .ref-group { margin-bottom: 18px; }
   .ref-group-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7280; margin-bottom: 8px; }
   .ref-entry { border-bottom: 1px solid #2E3648; padding: 10px 0; }
@@ -74,7 +82,7 @@
 
   <header class="top">
     <h1 style="font-size: clamp(22px, 4vw, 28px);">Wizard API Game</h1>
-    <span class="muted">This is a text RPG played entirely through HTTP requests. Click <strong>Connect</strong> below to start the game.</span>
+    <span class="muted">A text RPG played entirely through HTTP requests</span>
   </header>
 
   <div class="tab-switch">
@@ -83,22 +91,12 @@
   </div>
 
   <div id="tab-play">
-  <div class="card" id="api-activity-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-      <div class="kicker" style="margin-bottom: 0;">API Activity</div>
-      <a id="docs-link" href="#" target="_blank" rel="noopener" style="font-size: 13px;">View full API docs →</a>
-    </div>
-    <div class="muted" style="margin: 4px 0 10px 0;">Every request you make will appear here. Every action in the game is a real HTTP request to a live server. Tap one to see the actual request and response.</div>
-    <div id="api-log-list"><span class="muted">No requests yet.</span></div>
-  </div>
-
   <!-- SETUP SCREEN -->
   <div id="screen-setup">
     <div class="card">
-      <div class="kicker">Server</div>
-      <label for="server-url">Server URL</label>
-      <input type="text" id="server-url" placeholder="https://your-app.onrender.com">
-      <div class="muted" style="margin-bottom: 10px;">Don't change the URL above, just click Connect. This is hosted on a free Render instance, so the first request after idle time can take several seconds while it wakes up.</div>
+      <label for="server-url" style="display: none;">Server URL</label>
+      <input type="text" id="server-url" placeholder="https://your-app.onrender.com" style="display: none;">
+      <div class="muted" style="margin-bottom: 10px;">This game is hosted on a free instance of Render, so the first request after idle time can take a few seconds.</div>
       <button class="btn" id="btn-check-server">Connect</button>
       <div id="server-status"></div>
     </div>
@@ -159,13 +157,22 @@
       <div id="log-list"></div>
     </div>
   </div>
+
+  <div class="card" id="api-activity-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div class="kicker" style="margin-bottom: 0;">API Activity</div>
+      <a id="docs-link" href="#" style="font-size: 13px;">API Reference</a>
+    </div>
+    <div class="muted" style="margin: 4px 0 10px 0;">All the requests you trigger directly are listed here. Automatic background processes are not listed. Click one of the requests below to see more information.</div>
+    <div id="api-log-list"><span class="muted">No requests yet.</span></div>
+  </div>
   </div>
 
   <div id="tab-reference" style="display: none;">
     <div class="card">
       <div class="kicker">API Reference</div>
-      <p class="muted" style="margin: 4px 0 12px 0;">This documentation is written by hand, not auto-generated — edit the <code>wizardApiSpec</code> object near the bottom of this file to change any summary, description, or parameter note below.</p>
-      <div style="border: 1px solid #384156; border-radius: 8px; overflow: hidden;">
+      <p class="muted" style="margin: 4px 0 12px 0;">This API reference document lists all the actions available in the game as HTTP requests.</p>
+      <div class="rapidoc-wrapper" style="border: 1px solid #384156; border-radius: 8px; overflow: hidden;">
         <rapi-doc
           id="reference-doc"
           theme="dark"
@@ -175,7 +182,7 @@
           nav-bg-color="#14181F"
           nav-text-color="#A8A29E"
           nav-hover-bg-color="#262F3F"
-          render-style="read"
+          render-style="view"
           schema-style="table"
           show-header="false"
           allow-authentication="false"
@@ -252,7 +259,7 @@
     `).join('');
   }
 
-  async function api(path, method, body) {
+  async function api(path, method, body, silent) {
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
     if (studyEtag && path.endsWith('/study') && method === 'GET') {
@@ -266,45 +273,43 @@
         body: body ? JSON.stringify(body) : undefined
       });
     } catch (e) {
-      apiLog.unshift({
-        method: method || 'GET', path, requestBody: body || null,
-        status: 0, notableHeaders: {}, responseBody: { error: 'network_error' },
-        time: new Date().toLocaleTimeString()
-      });
-      if (apiLog.length > MAX_LOG_ENTRIES) apiLog.pop();
-      renderApiLog();
+      if (!silent) {
+        apiLog.unshift({
+          method: method || 'GET', path, requestBody: body || null,
+          status: 0, notableHeaders: {}, responseBody: { error: 'network_error' },
+          time: new Date().toLocaleTimeString()
+        });
+        if (apiLog.length > MAX_LOG_ENTRIES) apiLog.pop();
+        renderApiLog();
+      }
       return { ok: false, networkError: true, status: 0, data: null, res: null };
     }
     let data = null;
     if (res.status !== 304 && res.status !== 204) {
       try { data = await res.json(); } catch (e) { data = null; }
     }
-    const notableHeaders = {};
-    if (res.headers.get('ETag')) notableHeaders['ETag'] = res.headers.get('ETag');
-    if (res.headers.get('Retry-After')) notableHeaders['Retry-After'] = res.headers.get('Retry-After');
-    apiLog.unshift({
-      method: method || 'GET', path, requestBody: body || null,
-      status: res.status, notableHeaders, responseBody: data,
-      time: new Date().toLocaleTimeString()
-    });
-    if (apiLog.length > MAX_LOG_ENTRIES) apiLog.pop();
-    renderApiLog();
+    if (!silent) {
+      const notableHeaders = {};
+      if (res.headers.get('ETag')) notableHeaders['ETag'] = res.headers.get('ETag');
+      if (res.headers.get('Retry-After')) notableHeaders['Retry-After'] = res.headers.get('Retry-After');
+      apiLog.unshift({
+        method: method || 'GET', path, requestBody: body || null,
+        status: res.status, notableHeaders, responseBody: data,
+        time: new Date().toLocaleTimeString()
+      });
+      if (apiLog.length > MAX_LOG_ENTRIES) apiLog.pop();
+      renderApiLog();
+    }
     return { ok: res.ok, status: res.status, data, res };
   }
 
   // --- Setup screen ---
   $('server-url').value = serverUrl;
 
-  function updateDocsLink() {
-    $('docs-link').href = serverUrl.replace(/\/$/, '') + '/docs';
-  }
-  updateDocsLink();
-
   $('btn-check-server').addEventListener('click', async () => {
     serverUrl = $('server-url').value.trim();
     if (!serverUrl) return;
     localStorage.setItem('wizardServerUrl', serverUrl);
-    updateDocsLink();
     showMsg($('server-status'), 'Connecting — this can take a few seconds if the server was asleep…', 'info');
     const result = await api('/', 'GET');
     if (result.networkError) {
@@ -378,14 +383,14 @@
     refreshSpells();
   }
 
-  async function refreshWizard() {
-    const result = await api('/wizard', 'GET');
+  async function refreshWizard(silent) {
+    const result = await api('/wizard', 'GET', null, silent);
     if (!result.ok) return;
     $('spell-count-pill').textContent = `${result.data.spells_known_count} / ${result.data.spells_known_capacity} spells known`;
   }
 
-  async function refreshLocation() {
-    const result = await api('/location', 'GET');
+  async function refreshLocation(silent) {
+    const result = await api('/location', 'GET', null, silent);
     if (!result.ok) return;
     currentLocationId = null;
     for (const [id, npcs] of Object.entries(LOCATION_NPCS)) {
@@ -454,8 +459,8 @@
     box.innerHTML = `<p><strong>${NPC_NAMES[npcId] || npcId}:</strong><br>${escapeHtml(result.data.line).replace(/\n/g, '<br>')}</p>`;
   }
 
-  async function refreshSpells() {
-    const result = await api('/spells', 'GET');
+  async function refreshSpells(silent) {
+    const result = await api('/spells', 'GET', null, silent);
     if (!result.ok) return;
     renderSpells(result.data);
   }
@@ -561,7 +566,7 @@
     if (studyPollTimer) clearInterval(studyPollTimer);
     studyEtag = null;
     studyPollTimer = setInterval(async () => {
-      const result = await api(`/spells/${id}/study`, 'GET');
+      const result = await api(`/spells/${id}/study`, 'GET', null, true);
       if (result.status === 304) return; // no change since last check
       if (!result.ok && result.status !== 304) {
         clearInterval(studyPollTimer);
@@ -571,12 +576,12 @@
         clearInterval(studyPollTimer);
         studyEtag = null;
         showMsg($('global-msg'), `${id} learned.`, 'info');
-        refreshWizard();
-        refreshSpells();
+        refreshWizard(true);
+        refreshSpells(true);
         return;
       }
       if (result.res) studyEtag = result.res.headers.get('ETag');
-      refreshSpells();
+      refreshSpells(true);
     }, 3000);
   }
 
@@ -598,23 +603,29 @@
   }
 
   // --- Tabs ---
-  $('tab-btn-play').addEventListener('click', () => {
+  function showPlayTab() {
     $('tab-btn-play').classList.add('active');
     $('tab-btn-reference').classList.remove('active');
     $('tab-play').style.display = 'block';
     $('tab-reference').style.display = 'none';
-  });
-  $('tab-btn-reference').addEventListener('click', () => {
+  }
+  function showReferenceTab() {
     $('tab-btn-reference').classList.add('active');
     $('tab-btn-play').classList.remove('active');
     $('tab-reference').style.display = 'block';
     $('tab-play').style.display = 'none';
+  }
+  $('tab-btn-play').addEventListener('click', showPlayTab);
+  $('tab-btn-reference').addEventListener('click', showReferenceTab);
+  $('docs-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    showReferenceTab();
   });
 
   // --- Boot ---
   if (serverUrl && apiKey) {
     $('server-status').textContent = '';
-    api('/wizard', 'GET').then((result) => {
+    api('/wizard', 'GET', null, true).then((result) => {
       if (result.ok) {
         wizardName = result.data.name;
         enterGame();
@@ -666,9 +677,39 @@ const wizardApiSpec = {
     },
     {
       "name": "Casting"
+    },
+    {
+      "name": "General"
     }
   ],
   "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "General"
+        ],
+        "summary": "[One-line summary]",
+        "security": [],
+        "description": "[Describe this endpoint — note that no API key is required to call it.]",
+        "responses": {
+          "200": {
+            "description": "[Describe the response.]",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "docs": { "type": "string", "description": "[Describe this field.]" },
+                    "hint": { "type": "string", "description": "[Describe this field.]" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/wizard": {
       "post": {
         "tags": [
