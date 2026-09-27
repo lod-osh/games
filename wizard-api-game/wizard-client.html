@@ -11,7 +11,7 @@
   html { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
   *, *::before, *::after { box-sizing: inherit; }
   body { margin: 0; font-family: 'Source Sans 3', sans-serif; background: #1F2937; color: #E7E2D8; overflow-x: hidden; }
-  .wrap { max-width: 720px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
   h1, h2, h3 { font-family: 'Source Sans 3', sans-serif; margin: 0; }
   a { color: #E3A857; }
   button { font-family: inherit; cursor: pointer; }
@@ -61,7 +61,7 @@
      the width set in its HTML attributes. It also reaches outside its
      own element and force-sets width/height on its parent container.
      Both need !important to override script-set inline styles. */
-  #reference-doc { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+  #reference-doc { width: 100% !important; max-width: 100% !important; height: auto !important; box-sizing: border-box !important; }
   .rapidoc-wrapper { width: 100% !important; max-width: 100% !important; height: auto !important; overflow: hidden !important; box-sizing: border-box !important; }
   rapi-doc::part(section-main-content) { padding: 24px !important; }
 
@@ -103,16 +103,16 @@
 
     <div class="card" id="wizard-setup-card" style="display: none;">
       <div class="kicker">Your Wizard</div>
-      <div id="existing-key-block">
-        <label for="existing-key">Have an API key already?</label>
-        <input type="text" id="existing-key" placeholder="sk_wiz_...">
-        <button class="btn-outline" id="btn-resume">Resume with this key</button>
-      </div>
-      <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
-      <label for="new-name">Or create a new wizard</label>
+      <label for="new-name">Create a new wizard</label>
       <input type="text" id="new-name" placeholder="Your wizard's name" maxlength="32">
       <button class="btn" id="btn-create">Create new wizard</button>
       <div class="muted" style="margin-top: 8px;">There is no password recovery. If you lose this key, that wizard is gone for good — the same way it is in the real API.</div>
+      <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
+      <div id="existing-key-block">
+        <label for="existing-key">Or, if you already have an API key, resume with it</label>
+        <input type="text" id="existing-key" placeholder="sk_wiz_...">
+        <button class="btn-outline" id="btn-resume">Resume with this key</button>
+      </div>
       <div id="setup-msg"></div>
     </div>
   </div>
@@ -190,7 +190,7 @@
           allow-spec-file-load="false"
           allow-spec-url-load="false"
           show-method-in-nav-bar="as-colored-block"
-          style="height: 80vh; min-height: 500px; width: 100%; display: block;"
+          style="height: auto; min-height: 500px; width: 100%; display: block;"
         ></rapi-doc>
       </div>
     </div>
