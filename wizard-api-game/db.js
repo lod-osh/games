@@ -1,7 +1,11 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const db = new Database(path.join(__dirname, 'game.db'));
+// Test-only override so the test suite can run against an isolated
+// (typically in-memory) database instead of the real game.db.
+// Unset in production, so behavior there is unchanged.
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'game.db');
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
