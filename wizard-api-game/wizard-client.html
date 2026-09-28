@@ -12,7 +12,7 @@
   *, *::before, *::after { box-sizing: inherit; }
   body { margin: 0; font-family: 'Source Sans 3', sans-serif; background: #1F2937; color: #E7E2D8; overflow-x: hidden; }
   body, p, div, span, li, td, th { word-break: normal; overflow-wrap: break-word; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
+  .wrap { max-width: none; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
   h1, h2, h3 { font-family: 'Source Sans 3', sans-serif; margin: 0; }
   a { color: #E3A857; }
   button { font-family: inherit; cursor: pointer; }
@@ -65,6 +65,19 @@
   #reference-doc { width: 100% !important; max-width: 100% !important; height: auto !important; box-sizing: border-box !important; }
   .rapidoc-wrapper { width: 100% !important; max-width: 100% !important; height: auto !important; overflow: hidden !important; box-sizing: border-box !important; }
   rapi-doc::part(section-main-content) { padding: 24px !important; }
+  /* RapiDoc renders inside a Shadow DOM, which the page's own global
+     word-break/overflow-wrap rule can't reach — Shadow DOM is
+     deliberately isolated from outer page CSS. ::part() is the one
+     sanctioned way through that boundary, for parts the component
+     author explicitly exposed. */
+  rapi-doc::part(section-endpoint-head-description),
+  rapi-doc::part(section-endpoint-body-description),
+  rapi-doc::part(schema-description),
+  rapi-doc::part(label-operation-path),
+  rapi-doc::part(section-endpoint-head-path) {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
 
   .ref-group { margin-bottom: 18px; }
   .ref-group-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7280; margin-bottom: 8px; }
