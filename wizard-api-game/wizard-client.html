@@ -11,6 +11,7 @@
   html { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
   *, *::before, *::after { box-sizing: inherit; }
   body { margin: 0; font-family: 'Source Sans 3', sans-serif; background: #1F2937; color: #E7E2D8; overflow-x: hidden; }
+  body, p, div, span, li, td, th { word-break: normal; overflow-wrap: break-word; }
   .wrap { max-width: 960px; margin: 0 auto; padding: clamp(16px, 5vw, 32px); }
   h1, h2, h3 { font-family: 'Source Sans 3', sans-serif; margin: 0; }
   a { color: #E3A857; }
@@ -80,9 +81,11 @@
 <body>
 <div class="wrap">
 
+  <a href="https://lod-osh.github.io" style="font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 12px;">← Return to Portfolio</a>
+
   <header class="top">
     <h1 style="font-size: clamp(22px, 4vw, 28px);">Wizard API Game</h1>
-    <span class="muted">A text RPG played entirely through HTTP requests</span>
+    <span class="muted">This is a text RPG played entirely through HTTP requests to demonstrate my knowledge of both API design and API documentation. Check the Reference tab for the full list of calls used in this game.</span>
   </header>
 
   <div class="tab-switch">
@@ -105,11 +108,11 @@
       <div class="kicker">Your Wizard</div>
       <label for="new-name">Create a new wizard</label>
       <input type="text" id="new-name" placeholder="Your wizard's name" maxlength="32">
-      <button class="btn" id="btn-create">Create new wizard</button>
+      <button class="btn" id="btn-create">Create a new wizard</button>
       <div class="muted" style="margin-top: 8px;">There is no password recovery. If you lose this key, that wizard is gone for good — the same way it is in the real API.</div>
       <hr style="border: none; border-top: 1px solid #384156; margin: 16px 0;">
       <div id="existing-key-block">
-        <label for="existing-key">Or, if you already have an API key, resume with it</label>
+        <label for="existing-key">Or, if you already have an API key, resume with the wizard you already created.</label>
         <input type="text" id="existing-key" placeholder="sk_wiz_...">
         <button class="btn-outline" id="btn-resume">Resume with this key</button>
       </div>
@@ -163,7 +166,7 @@
       <div class="kicker" style="margin-bottom: 0;">API Activity</div>
       <a id="docs-link" href="#" style="font-size: 13px;">API Reference</a>
     </div>
-    <div class="muted" style="margin: 4px 0 10px 0;">All the requests you trigger directly are listed here. Automatic background processes are not listed. Click one of the requests below to see more information.</div>
+    <div class="muted" style="margin: 4px 0 10px 0;">All the requests you trigger directly are listed here. Automatic background processes are not listed. Click a request to see more information .</div>
     <div id="api-log-list"><span class="muted">No requests yet.</span></div>
   </div>
   </div>
@@ -424,7 +427,7 @@
   async function move(direction) {
     const result = await api('/location', 'PUT', { to: direction });
     if (!result.ok) {
-      showMsg($('global-msg'), (result.data && result.data.error) || 'Could not move that way.', 'error');
+      showMsg($('global-msg'), (result.data && result.data.error) || 'You cannot move that way.', 'error');
       return;
     }
     showMsg($('global-msg'), '', null);
@@ -437,7 +440,7 @@
     list.innerHTML = '';
     const npcs = LOCATION_NPCS[locationId] || [];
     if (npcs.length === 0) {
-      list.innerHTML = '<span class="muted">Nobody here to talk to.</span>';
+      list.innerHTML = '<span class="muted">There is no one here to talk to.</span>';
       return;
     }
     npcs.forEach((id) => {
@@ -469,7 +472,7 @@
     const list = $('spell-list');
     list.innerHTML = '';
     if (spells.length === 0) {
-      list.innerHTML = '<span class="muted">Nothing available to study yet.</span>';
+      list.innerHTML = '<span class="muted">There are no spells available to study yet.</span>';
       return;
     }
     spells.forEach((spell) => {
@@ -551,7 +554,7 @@
       let msg = 'Could not begin studying.';
       if (result.status === 423) {
         const retry = result.res.headers.get('Retry-After');
-        msg = `Already studying something else — ${retry}s remaining on that.`;
+        msg = `You are already studying something else — ${retry}s remaining on that.`;
       } else if (result.data && result.data.reason) {
         msg = `Cannot study: ${result.data.reason.replace(/_/g, ' ')}.`;
       }
@@ -653,7 +656,7 @@ const wizardApiSpec = {
   "info": {
     "title": "Wizard API Game",
     "version": "1.0.0",
-    "description": "A text RPG played entirely through HTTP requests. Status codes and headers are not invented flavor — a 423 means the same thing here as it does anywhere else. This document explains what that meaning is in context.\n"
+    "description": "A text RPG played entirely through HTTP requests.\n"
   },
   "servers": [
     {
@@ -717,7 +720,7 @@ const wizardApiSpec = {
         ],
         "summary": "Create a wizard",
         "security": [],
-        "description": "Issues a permanent API key. There is no recovery mechanism — losing this key means losing access to this wizard, permanently.\n",
+        "description": "Issues a permanent API key. There is no recovery for a lost key, and a lost key is a lost wizard.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -765,10 +768,10 @@ const wizardApiSpec = {
         "tags": [
           "Wizard"
         ],
-        "summary": "Get your own stats",
+        "summary": "See your own name, learned spells, spell capacity, and the spell you are studying (if any).",
         "responses": {
           "200": {
-            "description": "Current wizard state.",
+            "description": "Current wizard information.",
             "content": {
               "application/json": {
                 "schema": {
@@ -789,7 +792,7 @@ const wizardApiSpec = {
           "Wizard"
         ],
         "summary": "Set current study priority",
-        "description": "Idempotent — setting the same focus twice changes nothing further.",
+        "description": "Select the spell you want to learn. This call is idempotent, meaning that setting the same focus more than once has no effect.",
         "requestBody": {
           "required": true,
           "content": {
@@ -834,7 +837,7 @@ const wizardApiSpec = {
           "Wizard"
         ],
         "summary": "Event log",
-        "description": "A record of what you yourself have done so far.",
+        "description": "A record of what you have done in the game so far.",
         "responses": {
           "200": {
             "description": "Log entries, oldest first.",
@@ -861,10 +864,10 @@ const wizardApiSpec = {
           "World"
         ],
         "summary": "Look around",
-        "description": "Read-only. Safe to call as often as you like; looking changes nothing.",
+        "description": "Read-only. You can make this call as often as you like.",
         "responses": {
           "200": {
-            "description": "A description of where you are, and what's changed since it last mattered.",
+            "description": "A description of where you are and any significant changes since you last checked.",
             "content": {
               "application/json": {
                 "schema": {
@@ -883,7 +886,7 @@ const wizardApiSpec = {
           "World"
         ],
         "summary": "Move",
-        "description": "Idempotent — declaring where you stand, even repeatedly, leaves you in exactly one place.\n",
+        "description": "Walk in a direction. Redundant calls have no effect.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -896,7 +899,7 @@ const wizardApiSpec = {
                 "properties": {
                   "to": {
                     "type": "string",
-                    "description": "Direction or named destination."
+                    "description": "The direction you want to move."
                   }
                 }
               }
@@ -915,7 +918,7 @@ const wizardApiSpec = {
             }
           },
           "400": {
-            "description": "Not a valid direction from here.",
+            "description": "That is not a valid direction from here.",
             "content": {
               "application/json": {
                 "schema": {
@@ -936,7 +939,7 @@ const wizardApiSpec = {
           "World"
         ],
         "summary": "Talk to an NPC",
-        "description": "Non-idempotent — every call is a new conversational turn, even toward the same NPC, even with nothing new to say.\n",
+        "description": "This is a POST call, not a PUT, so it is non-idempotent. Once you say something, it has been said.\n",
         "parameters": [
           {
             "$ref": "#/components/parameters/NpcId"
@@ -944,7 +947,7 @@ const wizardApiSpec = {
         ],
         "responses": {
           "200": {
-            "description": "What they say to you this time.",
+            "description": "What the NPC says to you.",
             "content": {
               "application/json": {
                 "schema": {
@@ -968,10 +971,10 @@ const wizardApiSpec = {
           "Spells"
         ],
         "summary": "List visible spells",
-        "description": "Known spells and currently-eligible-to-learn spells only. Anything whose prerequisites aren't met is fully omitted — not shown as locked, not hinted at.\n",
+        "description": "Known spells and spells you can learn now are listed here. If a spells prerequisites have not been met, it is fully omitted from the list.\n",
         "responses": {
           "200": {
-            "description": "Visible spells. Shape depends on known state — see schema.",
+            "description": "The spells you know or know about.",
             "content": {
               "application/json": {
                 "schema": {
@@ -997,7 +1000,7 @@ const wizardApiSpec = {
         "summary": "List known spells only",
         "responses": {
           "200": {
-            "description": "Spells you currently know.",
+            "description": "Spells that you currently know.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1041,7 +1044,7 @@ const wizardApiSpec = {
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
-            "description": "Doesn't exist, or exists but isn't visible to you yet. Deliberately indistinguishable — the API does not leak existence of spells you can't yet see.\n",
+            "description": "This either does not exist or isn't visible to you yet.\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1057,7 +1060,7 @@ const wizardApiSpec = {
           "Spells"
         ],
         "summary": "Forget a known spell",
-        "description": "Final. Frees one of your six known-spell slots. Cannot be undone.",
+        "description": "Removes a spell from your known spell list, freeing one spell slot. This cannot be undone.",
         "parameters": [
           {
             "$ref": "#/components/parameters/SpellId"
@@ -1082,7 +1085,7 @@ const wizardApiSpec = {
           "Spells"
         ],
         "summary": "Begin studying a spell",
-        "description": "Blocked at start, not at completion, if you're at capacity or missing a prerequisite.",
+        "description": "Start the real-time process of learning a spell. If you have already learned your maximum number of spells or lack a prerequisite, you will be blocked from learning a new spell.",
         "parameters": [
           {
             "$ref": "#/components/parameters/SpellId"
@@ -1090,7 +1093,7 @@ const wizardApiSpec = {
         ],
         "responses": {
           "200": {
-            "description": "Study begun.",
+            "description": "You start studying the new spell.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1103,7 +1106,7 @@ const wizardApiSpec = {
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Blocked from starting.",
+            "description": "You cannot study this spell.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1116,7 +1119,7 @@ const wizardApiSpec = {
             "$ref": "#/components/responses/NotFound"
           },
           "409": {
-            "description": "Already known, or already studying this exact spell.",
+            "description": "You already know or are already studying this spell.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1126,13 +1129,13 @@ const wizardApiSpec = {
             }
           },
           "423": {
-            "description": "Locked — currently studying something else.",
+            "description": "You cannot start studying this spell because you are currently studying something else.",
             "headers": {
               "Retry-After": {
                 "schema": {
                   "type": "integer"
                 },
-                "description": "Seconds until the current study session ends."
+                "description": "The number of seconds until the current study session ends."
               }
             },
             "content": {
@@ -1150,7 +1153,7 @@ const wizardApiSpec = {
           "Spells"
         ],
         "summary": "Check study progress",
-        "description": "Supports conditional GET via If-None-Match / ETag.",
+        "description": "See how close you are to learning the current spell.",
         "parameters": [
           {
             "$ref": "#/components/parameters/SpellId"
@@ -1182,13 +1185,13 @@ const wizardApiSpec = {
             }
           },
           "304": {
-            "description": "Nothing's changed since your last check. No body."
+            "description": "Nothing has changed since your last check."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
-            "description": "No study in progress for this spell, or spell not visible.",
+            "description": "There is no study in progress for this spell.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1204,7 +1207,7 @@ const wizardApiSpec = {
           "Spells"
         ],
         "summary": "Abandon in-progress study",
-        "description": "Final. Progress is not saved; a later attempt restarts from zero.",
+        "description": "Stop studying the current spell so you are free to study another. Progress is not saved, studying that spell again restarts the progress from zero.",
         "parameters": [
           {
             "$ref": "#/components/parameters/SpellId"
@@ -1259,7 +1262,7 @@ const wizardApiSpec = {
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Spell not known. Unconditional — this is the only reason casting can be forbidden.",
+            "description": "You do not know this spell. This is the only reason casting can be forbidden.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1269,7 +1272,7 @@ const wizardApiSpec = {
             }
           },
           "409": {
-            "description": "Already cast, permanently. One-shot spells (e.g. Grow, Push, Awaken) cannot be cast again once their effect has taken hold, even if forgotten and relearned.\n",
+            "description": "The one-shot spell was already cast. It cannot be cast again once the effect has taken hold, even if you forget and relearn it.\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1279,7 +1282,7 @@ const wizardApiSpec = {
             }
           },
           "429": {
-            "description": "On cooldown. Repeatable spells only.",
+            "description": "This repeatable spell has to recharge.",
             "headers": {
               "Retry-After": {
                 "schema": {
@@ -1304,7 +1307,7 @@ const wizardApiSpec = {
       "ApiKeyAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "The permanent, unrecoverable key issued by POST /wizard."
+        "description": "The permanent and unrecoverable key issued by POST /wizard."
       }
     },
     "parameters": {
@@ -1337,7 +1340,7 @@ const wizardApiSpec = {
         }
       },
       "NotFound": {
-        "description": "Doesn't exist, or isn't visible to you. Never distinguished.",
+        "description": "This does not exist or is not visible to you.",
         "content": {
           "application/json": {
             "schema": {
@@ -1415,7 +1418,7 @@ const wizardApiSpec = {
           },
           "api_key": {
             "type": "string",
-            "description": "Shown once. Store it — there is no way to recover it."
+            "description": "This key is only shown once and there is no way to recover it. Be sure to save it."
           }
         }
       },
@@ -1540,11 +1543,11 @@ const wizardApiSpec = {
           "cooldown_seconds": {
             "type": "integer",
             "nullable": true,
-            "description": "Null for one-shot spells — cooldown doesn't apply."
+            "description": "Recharging does not apply for one-shot spells."
           },
           "already_cast": {
             "type": "boolean",
-            "description": "Only meaningful for one-shot spells."
+            "description": "This Boolean is only meaningful for one-shot spells."
           }
         }
       },
@@ -1581,7 +1584,7 @@ const wizardApiSpec = {
           },
           "effect": {
             "type": "string",
-            "description": "Freeform narration of what casting this spell just did."
+            "description": "The narration of what casting this spell just did."
           }
         }
       }
