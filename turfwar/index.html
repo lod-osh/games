@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>TURF WAR</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Turf War">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
     <style>
 
         /* TITLE SCREEN */
@@ -53163,6 +53170,11 @@ function resetJazzBarDescription() {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hookDayLabel); else hookDayLabel();
     if (location.hash === '#debug') window.addEventListener('load', function () { setTimeout(open, 500); });
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
 </script>
 </body>
 </html>
