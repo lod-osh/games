@@ -1,6 +1,6 @@
 // Turf War service worker: lets the game install and start offline.
 // Bump CACHE when you push a new build so installed copies refresh.
-const CACHE = 'turfwar-v138';
+const CACHE = 'turfwar-v140';
 const CORE = ['./', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
