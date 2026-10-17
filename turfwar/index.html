@@ -116,7 +116,7 @@
         #title-menu {
             display: flex; flex-direction: column; gap: 12px; width: 220px;
             margin: 0 auto;
-            background: rgba(0,8,2,0.35); border: 1px solid rgba(0,255,0,0.12);
+            background: rgba(0,8,2,0.35); border: none;
             padding: 16px; border-radius: 6px; backdrop-filter: blur(1.5px);
         }
         .title-menu-btn {
@@ -2745,6 +2745,7 @@ button:active, .popup-btn:active, .popup-close-btn:active {
 </div>
 <div id="intro-narration-overlay" class="gang-name-overlay" onclick="closeTravelPopupFromEvent(event)">
     <div class="tutorial-choice-card" style="text-align:left;">
+        <img id="intro-narration-image" src="" alt="" onerror="handleImageError(this)" style="display:block; width:100%; height:200px; object-fit:cover; border:1px solid #333; border-radius:6px; margin:0 0 12px;">
         <div id="intro-narration-text"></div>
     </div>
 </div>
@@ -6282,7 +6283,7 @@ const PH_INFORMANT_NAMES = {
 // portrait file -> who it is. desc: only what's evident from looking at them (never a secret role).
 // roleOnly: a job, not a person - shown as-is, never with a "?". leader: the rival gang's leader.
 const PH_NPC_FILES = {
-    'theo.jpg': { name: 'Theo' }, 'theo.png': { name: 'Theo' }, 'fanta.png': { name: 'Fanta' },
+    'theo.jpg': { name: 'Theo' }, 'theo.png': { name: 'Theo' }, 'fanta.jpg': { name: 'Fanta' },
     'gibson.jpg': { name: 'Gibson' }, 'link.jpg': { name: 'Link' }, 'sharpe.jpg': { name: 'Sharpe' },
     'hammer.png': { name: 'Hammer', desc: 'Gun dealer' }, 'isla.png': { name: 'Isla', desc: 'Gun dealer' },
     'franklin.png': { name: 'Franklin', desc: 'Gun dealer' }, 'oscar.png': { name: 'Oscar', desc: 'Gun dealer' },
@@ -6604,7 +6605,7 @@ const DRUG_MARKETS = {
 // always lands in handleImageError (error events don't bubble, so this listens in the capture phase).
 document.addEventListener('error', function (e) {
     const t = e.target;
-    if (t && t.tagName === 'IMG' && (t.id === 'travel-popup-image' || t.id === 'jazz-scene-image')) handleImageError(t);
+    if (t && t.tagName === 'IMG' && (t.id === 'travel-popup-image' || t.id === 'jazz-scene-image' || t.id === 'intro-narration-image')) handleImageError(t);
 }, true);
 function handleImageError(img) {
     // Don't clear img.onerror here: the popup <img> is reused, and popups that only set its src (the
@@ -6613,7 +6614,7 @@ function handleImageError(img) {
     if ((img.getAttribute('src') || '').indexOf('data:') === 0) return;
     // The big popup picture and the jazz-bar scene get drawn placeholder art (see PH_* below); any
     // other image that fails to load is simply hidden, as before.
-    if (img.id === 'travel-popup-image' || img.id === 'jazz-scene-image') {
+    if (img.id === 'travel-popup-image' || img.id === 'jazz-scene-image' || img.id === 'intro-narration-image') {
         try {
             const file = ((img.getAttribute('src') || '').split('/').pop() || '').split('?')[0];
             img.dataset.phFile = file;
@@ -20079,8 +20080,9 @@ const DIALOGUE_SPEAKERS = {
 // lines used to display under the first character's name and portrait for
 // the entire scene, since the popup only ever has one title/avatar and
 // nothing here ever touched it mid-conversation.
-function showStoryDialogue(paragraphs, onComplete, containerId, speakerChanges) {
+function showStoryDialogue(paragraphs, onComplete, containerId, speakerChanges, onStep) {
     storyDialogueState = {
+        onStep: onStep || null,
         paragraphs: paragraphs,
         index: 0,
         onComplete: onComplete || null,
@@ -20111,15 +20113,26 @@ function renderStoryDialogueStep() {
     if (storyDialogueTypeTimer) { clearInterval(storyDialogueTypeTimer); storyDialogueTypeTimer = null; }
     storyDialogueState.typingDone = false;
     const paragraph = storyDialogueState.paragraphs[storyDialogueState.index];
+    if (storyDialogueState.onStep) storyDialogueState.onStep(storyDialogueState.index);
     // Scoped to descriptionElement, not document.getElementById - a stale
     // "story-dialogue-text" span left behind in another dialogue container
     // (e.g. the intro narration overlay, never cleared after use) would
     // otherwise shadow this one, since getElementById always returns the
     // first match in document order regardless of which container is
     // actually visible.
+    // Every paragraph of this dialogue is laid out invisibly in the same grid
+    // cell as the live typing text, so the box is always as tall as the
+    // longest paragraph from the first character on. Without this the box
+    // grew line by line as the text typed out, and since the popup is
+    // vertically centered, the speaker's avatar crept upward each time a
+    // new line wrapped. Now the avatar stays fixed for the whole dialogue.
+    const escDlg = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const ghostHtml = storyDialogueState.paragraphs.map(p =>
+        `<div aria-hidden="true" style="grid-area:1/1; visibility:hidden; pointer-events:none;">${escDlg(p)}</div>`
+    ).join('');
     descriptionElement.innerHTML = `
-        <div style="min-height:70px; font-family:'Courier New', monospace; color:#4dff70; text-shadow:0 0 4px rgba(77,255,112,0.35); white-space:pre-wrap; line-height:1.6; font-size:14px;"
-             class="story-dialogue-line"><span class="story-dialogue-text"></span><span class="story-dialogue-cursor"></span></div>
+        <div style="display:grid; min-height:70px; font-family:'Courier New', monospace; color:#4dff70; text-shadow:0 0 4px rgba(77,255,112,0.35); white-space:pre-wrap; line-height:1.6; font-size:14px;"
+             class="story-dialogue-line">${ghostHtml}<div style="grid-area:1/1;"><span class="story-dialogue-text"></span><span class="story-dialogue-cursor"></span></div></div>
     `;
     const textEl = descriptionElement.querySelector('.story-dialogue-text');
     let i = 0;
@@ -20382,7 +20395,7 @@ function showFantaDialog() {
     const { popup, titleElement, image, descriptionElement } = getTravelPopupElements();
 
     titleElement.textContent = 'FANTA';
-    image.onerror = function(){handleImageError(this)}; image.src = 'fanta.png';
+    image.onerror = function(){handleImageError(this)}; image.src = 'fanta.jpg';
     image.alt = 'Fanta';
 
     // Mission 2: first meeting - condolences, what she's doing in the
@@ -33530,11 +33543,28 @@ const INTRO_NARRATION_PARAGRAPHS = [
     `A knot forms in your stomach as you step out of the taxi, back onto your home turf. It's been almost a year since you left with dreams of making an honest living outside this hellscape they call a city.`,
     `You thought you could grind at the pipeline and start bringing in your crew one by one when they saw the money was good.`,
     `But there were no jobs. A hundred men competed for six positions, nearly killing each other to prove themselves worthy. You wanted no part of it. You looked for other work, but it was the same everywhere.`,
-    `Then Bishop, the gang's logistician and your chosen uncle, stopped answering your emails.`,
+    `Then Bishop, the gang's logistician and your chosen uncle, stopped answering your letters.`,
     `You had no choice but to return to your old life and the crime that supported it. You just hoped they'd take you back.`,
-    `You sent one final email yesterday to tell Bishop you were coming home. He's not waiting to meet you. You're back, but you might not be welcomed back.`,
     `You spot Theo down the street, positioned at his usual lookout spot in front of Sal's. He gives you a nod.`
 ];
+// One picture per intro card, same order as INTRO_NARRATION_PARAGRAPHS.
+const INTRO_NARRATION_IMAGES = [
+    'downtown.png',      // A knot forms...
+    'pipeline.jpg',      // You thought you could grind at the pipeline...
+    'nowork.jpg',        // But there were no jobs...
+    'returntocity.jpg',   // Then Bishop... stopped answering your letters
+    'returntocity2.jpg', // You had no choice but to return...
+    'returntocity3.jpg'  // You spot Theo...
+];
+function setIntroNarrationImage(index) {
+    const img = document.getElementById('intro-narration-image');
+    if (!img) return;
+    const src = INTRO_NARRATION_IMAGES[index];
+    if (!src) { img.style.display = 'none'; return; }
+    img.style.display = 'block';
+    img.alt = '';
+    img.src = src;
+}
 
 // Both New Game confirmations (the in-game menu's confirmNewGame() and the
 // game-over screen) used to just location.reload() - that resets in-memory
@@ -33550,11 +33580,18 @@ function restartNewGame() {
 function startNewGameFromTitle() {
     closeTitleScreen();
     document.getElementById('log').innerHTML = '';
+    // The story opens at night, in the rain. daySegment 5 is "Night" (see
+    // SEGMENT_NAMES); the street lighting, crowds and NPC routines all key
+    // off it and off gameState.isRaining. Weather re-rolls normally from the
+    // next day rollover (advanceTime), so this only shapes the opening.
+    gameState.daySegment = 5;
+    gameState.isRaining = true;
+    if (typeof updateRainAmbience === 'function') updateRainAmbience();
     const introOverlay = document.getElementById('intro-narration-overlay');
     if (introOverlay) {
         introOverlay.classList.add('show');
         document.addEventListener('keydown', closeTravelPopupOnKey);
-        showStoryDialogue(INTRO_NARRATION_PARAGRAPHS, continueFromIntroNarration, 'intro-narration-text');
+        showStoryDialogue(INTRO_NARRATION_PARAGRAPHS, continueFromIntroNarration, 'intro-narration-text', null, setIntroNarrationImage);
     } else {
         proceedToGangNaming(); // defensive fallback if the narration markup is ever missing
     }
@@ -33580,7 +33617,10 @@ function proceedToTutorialChoice() {
     // Used to open a "guided missions vs skip" overlay - the mission chain
     // is now the required story opening, not an optional tutorial, so this
     // just starts the game straight into it.
-    showTravelPopup(gameState.currentLocation);
+    // The intro's last card ("You spot Theo...") already sets the scene, so
+    // skip the DOWNTOWN arrival popup this one time and go straight to street
+    // mode (it's what closing that popup would have done anyway).
+    hitTheStreets();
 }
 
 // Pool of gang name/color suggestions - used to auto-assign the player's
