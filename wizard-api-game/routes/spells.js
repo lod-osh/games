@@ -5,6 +5,14 @@ const { getKnownSet, hasCastFactory, lastCastAt, logEvent } = require('../state'
 
 const router = express.Router();
 
+// Test-only: scales study/cooldown durations so automated tests don't
+// have to wait through real 5-90 minute study times. Unset in
+// production, so SCALE is always 1 there and behavior is unchanged.
+const SCALE = Number(process.env.STUDY_TIME_SCALE) > 0 ? Number(process.env.STUDY_TIME_SCALE) : 1;
+function scaledSeconds(seconds) {
+  return seconds * SCALE;
+}
+
 const insertKnown = db.prepare('INSERT INTO known_spells (wizard_id, spell_id, learned_at) VALUES (?, ?, ?)');
 const deleteKnown = db.prepare('DELETE FROM known_spells WHERE wizard_id = ? AND spell_id = ?');
 const getSession = db.prepare('SELECT * FROM study_sessions WHERE wizard_id = ?');
@@ -19,7 +27,7 @@ function knownShape(spell, hasCast) {
     description: spell.description,
     known: true,
     one_shot: spell.one_shot,
-    cooldown_seconds: spell.one_shot ? null : spell.cooldown_seconds,
+    cooldown_seconds: spell.one_shot ? null : scaledSeconds(spell.cooldown_seconds),
     already_cast: spell.one_shot ? hasCast(spell.id) : undefined
   };
 }
@@ -30,7 +38,7 @@ function eligibleShape(spell) {
     name: spell.name,
     description: spell.description,
     known: false,
-    study_time_seconds: spell.study_time_seconds
+    study_time_seconds: scaledSeconds(spell.study_time_seconds)
   };
 }
 
@@ -102,7 +110,7 @@ router.post('/spells/:id/study', (req, res) => {
   const session = getSession.get(req.wizard.id);
   if (session && session.spell_id !== spell.id) {
     const elapsedMs = Date.now() - new Date(session.started_at).getTime();
-    const totalMs = spellData[session.spell_id].study_time_seconds * 1000;
+    const totalMs = scaledSeconds(spellData[session.spell_id].study_time_seconds) * 1000;
     const remainingSec = Math.max(0, Math.ceil((totalMs - elapsedMs) / 1000));
     res.set('Retry-After', String(remainingSec));
     return res.status(423).json({ error: 'locked' });
@@ -126,7 +134,7 @@ router.post('/spells/:id/study', (req, res) => {
     spell_id: spell.id,
     status: 'studying',
     percent_complete: 0,
-    time_remaining_seconds: spell.study_time_seconds,
+    time_remaining_seconds: scaledSeconds(spell.study_time_seconds),
     started_at: startedAt
   });
 });
@@ -140,7 +148,7 @@ router.get('/spells/:id/study', (req, res) => {
 
   const spell = spellData[session.spell_id];
   const elapsedMs = Date.now() - new Date(session.started_at).getTime();
-  const totalMs = spell.study_time_seconds * 1000;
+  const totalMs = scaledSeconds(spell.study_time_seconds) * 1000;
   const percent = Math.min(100, Math.floor((elapsedMs / totalMs) * 100));
 
   if (percent >= 100) {
@@ -200,7 +208,7 @@ router.post('/spells/:id/cast', (req, res) => {
     const last = lastCastAt(req.wizard.id, spell.id);
     if (last) {
       const elapsedMs = Date.now() - new Date(last).getTime();
-      const cooldownMs = spell.cooldown_seconds * 1000;
+      const cooldownMs = scaledSeconds(spell.cooldown_seconds) * 1000;
       if (elapsedMs < cooldownMs) {
         const remainingSec = Math.ceil((cooldownMs - elapsedMs) / 1000);
         res.set('Retry-After', String(remainingSec));
